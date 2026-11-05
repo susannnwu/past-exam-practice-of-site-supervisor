@@ -7,7 +7,7 @@ fs.mkdirSync(out,{recursive:true});
   const context=await browser.newContext({offline:false,viewport:{width,height:844}}),page=await context.newPage(),errors=[];
   page.on('dialog',d=>d.accept());page.on('pageerror',e=>errors.push(e.message));
   await page.goto(new URL(entry,process.env.QUIZ_TEST_BASE_URL).href);
-  assert.equal(await page.title(),'Past Exam Practice of Site Supervisor');assert.equal(await page.locator('h1').textContent(),'Past Exam Practice of Site Supervisor');
+  assert.equal(await page.title(),'工地主任歷屆試題模擬練習');assert.equal(await page.locator('h1').textContent(),'工地主任歷屆試題模擬練習');
   await page.locator('#start').click();
   assert(await page.locator('.controls').isVisible(),'Empty selection stays on selection screen');
   const id=await page.locator('#sheet option').nth(1).getAttribute('value');

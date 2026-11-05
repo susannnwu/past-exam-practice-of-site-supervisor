@@ -1,4 +1,4 @@
-name: Publish Past Exam Practice of Site Supervisor (manual)
+name: 發布工地主任歷屆試題模擬練習（手動）
 on:
   workflow_dispatch:
 permissions:

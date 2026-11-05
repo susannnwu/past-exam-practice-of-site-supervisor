@@ -20,7 +20,7 @@ paths+=['data_set/'+p for p in sorted(images)]
 expected=set(paths)|{'.nojekyll'}
 assert {p.relative_to(SITE).as_posix() for p in SITE.rglob('*') if p.is_file()}==expected
 for rel in paths:assert (ROOT/rel).read_bytes()==(SITE/rel).read_bytes(),rel
-title='Past Exam Practice of Site Supervisor'
+title='工地主任歷屆試題模擬練習'
 html=(SITE/'index.html').read_text(encoding='utf-8')
 assert f'<title>{title}</title>' in html and f'<h1>{title}</h1>' in html
 docs=0

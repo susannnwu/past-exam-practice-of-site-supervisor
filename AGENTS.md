@@ -1,9 +1,9 @@
-# Past Exam Practice of Site Supervisor — 專案補充規則 V0.1.14
+# 工地主任歷屆試題模擬練習 — 專案補充規則 V0.1.15
 
-更新日期：2026-11-05。通用工作模式由全域 AGENTS.md 維護，本檔只記本專案補充。
+更新日期：2026-11-06。通用工作模式由全域 AGENTS.md 維護，本檔只記本專案補充。
 
 - 本目錄是唯一網站維護與 Git 工作目錄。上層僅保留 `DATA` 與 `GitHub`；所有舊資料、備份、輸入、Excel、交付與驗證紀錄放在 `../DATA`，不複製進此儲存庫。
-- 網站名稱統一為 `Past Exam Practice of Site Supervisor`，GitHub 儲存庫為 `susannnwu/past-exam-practice-of-site-supervisor`，已於 2026-11-05 完成更名。remote 與測試子路徑保持一致；未推送的程式不得宣稱已上線。
+- 網站、README 與 GitHub 專案說明顯示名稱統一為 `工地主任歷屆試題模擬練習`，英文僅用於網址、儲存庫 slug、套件名稱等必要技術識別，GitHub 儲存庫為 `susannnwu/past-exam-practice-of-site-supervisor`，已於 2026-11-05 完成更名。remote 與測試子路徑保持一致；未推送的程式不得宣稱已上線。
 - 以 GitHub／GitHub Pages 為唯一發布來源。不再交付本機執行版或同步 Sites；舊 Site 及其來源僅留作歷史，不自行刪除或關閉。
 - 結構固定：根目錄 `index.html`，`src` 放 JS／CSS，`data_set` 放資料資產，`scripts` 放工具，`tests` 放測試，`docs` 放文件。原始 PDF 不移入 Input，也不改名或另複製一份進 Git。
 - 沿用既有 GitHub 提交歷史及 65 份原始 PDF。提交前核對 PDF 沒有增刪修改；不重寫歷史或強制推送。一般整理只準備變更，不自行 commit／push；依使用者當次明確授權執行遠端操作。

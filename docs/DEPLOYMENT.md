@@ -1,4 +1,4 @@
-# Deployment — Past Exam Practice of Site Supervisor
+# 發布說明 — 工地主任歷屆試題模擬練習
 
 現行儲存庫：[susannnwu/past-exam-practice-of-site-supervisor](https://github.com/susannnwu/past-exam-practice-of-site-supervisor)。2026-11-05 已由 `site-supervisor-quiz` 更名，儲存庫 ID 與提交歷史不變；本機 origin 已同步。此次更名不包含程式碼推送或手動觸發 Pages。
 
@@ -14,7 +14,7 @@
 
 ## 更名
 
-網站顯示名稱固定為 `Past Exam Practice of Site Supervisor`；儲存庫 URL 不支援空格，因此採小寫連字號 slug。origin 與 HTTP 測試子路徑已對應新名稱；正式發布時仍須檢查 Pages 設定與新網站網址。
+網站顯示名稱固定為 `工地主任歷屆試題模擬練習`；網址及儲存庫識別保留既有英文 slug，其他顯示名稱採中文。origin 與 HTTP 測試子路徑已對應新名稱；正式發布時仍須檢查 Pages 設定與新網站網址。
 
 原 localStorage keys 與題目 ID 保持不變，但不同網址的瀏覽器儲存區彼此隔離，GitHub Pages 不會自動取得舊 Sites 的作答紀錄。
 

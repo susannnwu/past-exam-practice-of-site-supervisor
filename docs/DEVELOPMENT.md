@@ -1,4 +1,4 @@
-# Development — Past Exam Practice of Site Supervisor
+# 開發說明 — 工地主任歷屆試題模擬練習
 
 本儲存庫維護唯一的 GitHub Pages 網站，不另維護可下載的本機版。開發預覽與測試只用於驗證相同來源。
 

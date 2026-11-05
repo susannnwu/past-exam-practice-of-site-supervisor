@@ -1,4 +1,4 @@
-# Data — Past Exam Practice of Site Supervisor
+# 資料說明 — 工地主任歷屆試題模擬練習
 
 原始 65 份 PDF 沿用既有 GitHub 內容與路徑。新版需要 `data_set/quiz-data.js` 與 410 張題目裁切圖片；僅更新必要衍生資料，不刪除再上傳 PDF，也不忽略整個 data_set。
 
