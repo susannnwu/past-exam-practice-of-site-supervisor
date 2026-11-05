@@ -1,0 +1,37 @@
+const {chromium}=require('playwright'),path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..'),out=process.env.QUIZ_TEST_OUTPUT||path.join(root,'test-results');
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE}),report=[];
+fs.mkdirSync(out,{recursive:true});
+try{for(const entry of ['index.html','dist/index.html'])for(const width of [390,1280]){
+ const ctx=await browser.newContext({offline:false,colorScheme:'light',viewport:{width,height:844}}),page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(new URL(entry,process.env.QUIZ_TEST_BASE_URL).href);
+ const ordered=await page.evaluate(()=>[...document.querySelector('#sheet').options].filter(o=>o.value).map(o=>DATA.find(e=>e.id===o.value)));
+ assert.equal(ordered.length,48);assert.equal(Number(ordered[0].year),115);assert.equal(Number(ordered.at(-1).year),111);
+ const rank=e=>Number(e.year)*10-Number(e.session.match(/第(\d+)次/)[1]);
+ assert(ordered.every((e,i)=>!i||rank(ordered[i-1])>=rank(e)));
+ const sessions=await page.locator('#session option').evaluateAll(opts=>opts.filter(o=>o.value).map(o=>o.value));
+ assert.deepEqual(sessions,[...new Set(ordered.map(e=>e.session))]);
+ await page.selectOption('#year','114');
+ assert.deepEqual(await page.locator('#session option').evaluateAll(opts=>opts.filter(o=>o.value).map(o=>o.value)),['114年第1次','114年第2次','114年第3次']);
+ const filtered=await page.evaluate(()=>[...document.querySelector('#sheet').options].filter(o=>o.value).map(o=>DATA.find(e=>e.id===o.value)));
+ assert.equal(filtered.length,12);assert(filtered.every(e=>Number(e.year)===114));assert(filtered.every((e,i)=>!i||rank(filtered[i-1])>=rank(e)));
+ await page.selectOption('#session','114年第2次');assert.equal(await page.locator('#sheet option').count(),5);
+ await page.selectOption('#year','');
+ assert.equal(await page.locator('#displayMode').count(),0);
+ assert.deepEqual(await page.locator('footer [data-mode]').allTextContents(),['Light','Dark','System']);
+ await page.locator('[data-mode=night]').click();assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(0, 0, 0)');
+ await page.reload();assert.equal(await page.locator('[data-mode=night]').getAttribute('aria-pressed'),'true');
+ await page.locator('[data-mode=system]').click();await page.emulateMedia({colorScheme:'dark'});assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(0, 0, 0)');
+ await page.evaluate(()=>startExam(DATA[0].id));
+ await page.locator('[data-mode=light]').click();
+ assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(245, 245, 247)');
+ const bounds=await page.locator('.theme-buttons').boundingBox(),bar=await page.locator('.quiz-actions').boundingBox();
+ assert(bounds.y+bounds.height<=bar.y,'Footer controls must not be covered by fixed quiz actions');
+ assert(await page.locator('[data-mode=light]').evaluate(el=>{const b=el.getBoundingClientRect();return el.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));}));
+ await page.screenshot({path:path.join(out,`${entry==='index.html'?'來源':'發佈版'}_底部模式_${width}.png`)});
+ await page.locator('#backTop').click();await page.locator('[data-view=wrong]').click();await page.locator('[data-mode=night]').click();
+ assert.equal(await page.locator('[data-mode=night]').getAttribute('aria-pressed'),'true');
+ assert.deepEqual(errors,[]);report.push({entry,width,footerOnly:true,labels:['Light','Dark','System'],persisted:true,systemLive:true,quizBarDoesNotCover:true,wrongView:true,examsNewestFirst:true,yearAndSessionFilters:true,servedOverHTTP:true});await ctx.close();
+}}finally{await browser.close();}
+fs.writeFileSync(path.join(out,'底部模式驗證_V2.6.8.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+})().catch(e=>{console.error(e);process.exitCode=1;});

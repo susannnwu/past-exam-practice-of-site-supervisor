@@ -3,32 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>工地主任歷年考古題練習</title>
-  <style>
-    :root{--ink:#172b3a;--muted:#657786;--line:#d9e4ea;--bg:#f4f8fa;--card:#fff;--brand:#147d92;--brand-dark:#0b5263;--accent:#e9f7f5;--bad:#b84b4b;--good:#137a58;--shadow:0 12px 32px rgba(17,55,70,.08)}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft JhengHei",system-ui,sans-serif;line-height:1.65}
-    button,select{font:inherit} button{cursor:pointer;border:0}.shell{max-width:1180px;margin:auto;padding:28px 20px 60px}
-    header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:24px}.eyebrow{font-size:12px;color:var(--brand);font-weight:800;letter-spacing:.12em}.brand h1{margin:4px 0 0;font-size:clamp(25px,4vw,38px);letter-spacing:.02em}.brand p{margin:6px 0 0;color:var(--muted)}
-    .stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.stat{background:var(--card);border:1px solid var(--line);padding:10px 14px;border-radius:14px;min-width:105px}.stat b{display:block;font-size:21px;color:var(--brand-dark)}.stat span{font-size:12px;color:var(--muted)}
-    .tabs{display:flex;gap:8px;margin-bottom:18px}.tab{background:transparent;color:var(--muted);padding:10px 16px;border-radius:10px;font-weight:700}.tab.active{background:var(--brand);color:white}
-    .view{display:none}.view.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
-    .controls{padding:20px;display:grid;grid-template-columns:repeat(3,1fr) auto;gap:14px;align-items:end}.field label{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:5px}.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink)}.primary{background:var(--brand);color:#fff;padding:11px 18px;border-radius:10px;font-weight:800}.primary:hover{background:var(--brand-dark)}.secondary{background:#edf4f6;color:var(--brand-dark);padding:10px 15px;border-radius:10px;font-weight:700}
-    .hint{margin:16px 2px;color:var(--muted);font-size:14px}.empty{padding:36px;text-align:center;color:var(--muted)}
-    .quiz-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}.quiz-top h2{margin:0;font-size:22px}.quiz-top p{margin:3px 0;color:var(--muted);font-size:14px}.quiz-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .question{padding:22px;margin:14px 0}.q-head{display:flex;gap:12px;align-items:flex-start}.q-no{background:var(--accent);color:var(--brand-dark);font-weight:900;border-radius:10px;padding:4px 9px;white-space:nowrap}.q-text{font-size:17px;font-weight:750;white-space:pre-wrap}.options{display:grid;grid-template-columns:1fr;gap:10px;margin:18px 0 0 48px}.option{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fbfdfe;transition:.15s}.option:hover{border-color:var(--brand);background:#f2fbfb}.option input{margin-top:5px;accent-color:var(--brand)}.option span{font-size:15px}.option.missing span{color:#8799a2;font-style:italic}.option.answer-correct{border-color:#63b58f;background:#eaf8f0;color:#116b4d}.option.answer-correct input{accent-color:#137a58}.option.answer-wrong{border-color:#dc8181;background:#fff0f0;color:#a52e2e}.option.answer-wrong input{accent-color:#b84b4b}
-    .result{padding:16px 20px;border-radius:14px;background:var(--accent);margin:16px 0}.result strong{font-size:25px;color:var(--brand-dark)}.result .sub{color:var(--muted);font-size:14px}.review{margin-top:18px}.review-item{padding:14px 16px;border-top:1px solid var(--line)}.review-item .wrong{color:var(--bad);font-weight:800}.review-item .right{color:var(--good);font-weight:800}.review-item p{margin:3px 0}.badge{display:inline-block;background:#eef2f4;color:var(--muted);border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
-    .wrong-head{display:flex;justify-content:space-between;align-items:center;padding:20px}.wrong-head h2{margin:0}.wrong-list{padding:0 20px 20px}.wrong-card{padding:16px 0;border-top:1px solid var(--line)}.wrong-card h3{font-size:14px;margin:0;color:var(--brand-dark)}.wrong-card p{margin:5px 0}.wrong-card .meta{font-size:12px;color:var(--muted)}.danger{background:#fff0f0;color:var(--bad);padding:9px 13px;border-radius:9px;font-weight:700}
-    footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12px}.source{color:var(--brand);text-decoration:none}.source:hover{text-decoration:underline}
-    @media(max-width:760px){header{display:block}.stats{justify-content:flex-start;margin-top:16px}.controls{grid-template-columns:1fr}.options{grid-template-columns:1fr;margin-left:0}.quiz-top{display:block}.quiz-actions{margin-top:12px}}
-  </style>
+  <title>Past Exam Practice of Site Supervisor</title>
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Apply the saved choice before first paint; storage may be unavailable.
+    try {
+      const mode=localStorage.getItem('site-supervisor-theme-v1');
+      document.documentElement.dataset.theme=mode==='light'||mode==='night'?mode:'system';
+    } catch { document.documentElement.dataset.theme='system'; }
+  </script>
+  
+  <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
   <div class="shell">
     <header>
-      <div class="brand"><div class="eyebrow">CONSTRUCTION SITE SUPERVISOR</div><h1>工地主任歷年考古題練習</h1><p>挑選試券、完成作答，錯題會自動保存在這台裝置。</p></div>
+      <div class="brand"><div class="eyebrow">SITE SUPERVISOR</div><h1>Past Exam Practice of Site Supervisor</h1><p>挑選試券、完成作答，錯題會自動保存在這台裝置。</p></div>
       <div class="stats"><div class="stat"><b id="setCount">48</b><span>張試券</span></div><div class="stat"><b id="questionCount">2,400</b><span>題目</span></div><div class="stat"><b id="wrongCount">0</b><span>錯題紀錄</span></div></div>
     </header>
-    <nav class="tabs"><button class="tab active" data-view="home">選擇試券</button><button class="tab" data-view="wrong">錯題紀錄 <span id="wrongBadge"></span></button></nav>
+    <nav class="tabs"><button class="tab active" data-view="home">選擇試券</button><button class="tab" data-view="wrong">錯題紀錄 <span id="wrongBadge"></span></button><button class="tab" data-view="marked">已標記題目 <span id="markedBadge"></span></button></nav>
 
     <main id="home" class="view active">
       <section class="card controls">
@@ -37,68 +30,32 @@
         <div class="field"><label for="sheet">試券</label><select id="sheet"></select></div>
         <button id="start" class="primary">開始模擬</button>
       </section>
-      <p class="hint">每張試券 50 題。完成後按「交卷並檢討」，系統會顯示分數並把答錯或未作答題目加入錯題紀錄；掃描影像試券已略過。</p>
+      <p class="hint">每次練習 90 分鐘，從零開始計時。答案會自動保存；離開前可按「儲存並暫停」。旗幟表示待檢查，打勾表示已確認。到時會提醒，不強制交卷。</p>
+      <p class="hint">每題 2 分，50 題滿分 100 分。題庫 V2.3 已依原始答案校正 112 年第 3 次的 74 筆答案；相關舊作答以新版答案重新呈現成績與錯題，原始紀錄仍保留。本系統供自主練習使用。</p>
+      <section id="savedProgress" class="card progress-panel"></section>
+      <section id="examHistory" class="card progress-panel" hidden></section>
       <section id="quiz" hidden></section>
     </main>
 
     <main id="wrong" class="view">
-      <section class="card"><div class="wrong-head"><h2>我的錯題紀錄</h2><button id="clearWrong" class="danger">清除全部紀錄</button></div><div id="wrongList" class="wrong-list"></div></section>
+      <section class="card"><div class="wrong-head"><h2>我的錯題紀錄</h2><button id="clearWrong" class="danger">清除全部紀錄</button></div><div class="wrong-filters"><div class="field"><label for="wrongExam">試卷</label><select id="wrongExam"></select></div><div class="field"><label for="wrongRun">作答次數</label><select id="wrongRun"></select></div></div><div id="wrongSummary" class="hint"></div><div id="wrongList" class="wrong-list"></div></section>
     </main>
-    <footer>資料來源：指定網站下載之歷屆考題 PDF。錯題資料只儲存在瀏覽器 localStorage，不會上傳。</footer>
+    <main id="marked" class="view">
+      <section class="card">
+        <div class="wrong-head"><h2>已標記題目</h2></div>
+        <p class="hint marked-hint">⚑ 待檢查　✓ 已確認。同一題的標記在作答、錯題與此處共用；可再次點按符號取消。</p>
+        <div class="wrong-filters">
+          <div class="field"><label for="markedExam">試卷</label><select id="markedExam"></select></div>
+          <div class="field"><label for="markedType">標記類型</label><select id="markedType"><option value="">全部標記</option><option value="flags">⚑</option><option value="checks">✓</option></select></div>
+        </div>
+        <p id="markedSummary" class="hint marked-hint" role="status"></p>
+        <div id="markedList" class="wrong-list"></div>
+      </section>
+    </main>
+    <footer>資料來源：指定網站下載之歷屆考題 PDF。作答與標記資料只儲存在此瀏覽器，不會上傳。<div class="theme-buttons" role="group" aria-label="顯示模式"><button type="button" data-mode="light" aria-pressed="false">Light</button><button type="button" data-mode="night" aria-pressed="false">Dark</button><button type="button" data-mode="system" aria-pressed="true">System</button></div></footer>
   </div>
-  <script src="quiz-data.js"></script>
-  <script>
-    const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-    const PDF_PREFIX=location.protocol==='file:'?'../data_set/':'./data_set/';
-    const WRONG_KEY='site-supervisor-wrong-v1', COMPLETED_KEY='site-supervisor-completed-v1'; let current=null;
-    const getWrong=()=>JSON.parse(localStorage.getItem(WRONG_KEY)||'[]');
-    const saveWrong=x=>localStorage.setItem(WRONG_KEY,JSON.stringify(x));
-    const getCompleted=()=>new Set([...JSON.parse(localStorage.getItem(COMPLETED_KEY)||'[]'),...getWrong().map(x=>x.setId).filter(Boolean)]);
-    const saveCompleted=id=>{const done=getCompleted();done.add(id);localStorage.setItem(COMPLETED_KEY,JSON.stringify([...done]));};
-    const label=s=>s.replace(/_?試題|_?答案/g,'').replaceAll('_',' ');
-    function refreshStats(){const w=getWrong();$('#setCount').textContent=DATA.length;$('#questionCount').textContent=DATA.reduce((n,x)=>n+x.questions.length,0).toLocaleString();$('#wrongCount').textContent=w.length;$('#wrongBadge').textContent=w.length?`(${w.length})`:'';}
-    function fill(select,values,placeholder,display=v=>v){select.innerHTML=`<option value="">${placeholder}</option>`+values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(display(v))}</option>`).join('');}
-    function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-    function updateFilters(){
-      const years=[...new Set(DATA.map(x=>x.year))].sort(); fill($('#year'),years,'全部年份');
-      const refreshSheets=()=>{const y=$('#year').value,s=$('#session').value; const sheets=DATA.filter(x=>(!y||x.year===y)&&(!s||x.session===s)); const done=getCompleted(); fill($('#sheet'),sheets.map(x=>x.id),'請選擇試券',id=>done.has(id)?`${id}（已作答）`:id);};
-      $('#year').onchange=()=>{const y=$('#year').value; const ss=[...new Set(DATA.filter(x=>!y||x.year===y).map(x=>x.session))].sort(); fill($('#session'),ss,'全部次數'); refreshSheets();};
-      $('#session').onchange=refreshSheets;
-      fill($('#session'),[], '請先選擇年份'); fill($('#sheet'),[], '請先選擇次數');
-    }
-    function renderQuiz(){
-      const qs=current.questions; $('#quiz').hidden=false; $('#quiz').innerHTML=`<div class="quiz-top"><div><h2>${escapeHtml(current.session)}・${escapeHtml(label(current.sheet))}</h2><p>共 ${qs.length} 題｜<a class="source" href="${PDF_PREFIX}${encodeURI(current.pdf)}" target="_blank">開啟原始 PDF</a></p></div><div class="quiz-actions"><button class="secondary" id="backTop">回到選券</button><button class="primary" id="submit">交卷並檢討</button></div></div><div id="cards"></div>`;
-      $('#cards').innerHTML=qs.map((q,i)=>{const opts=['A','B','C','D'].map(k=>{const val=q.options[k]||'（本題排版未完整擷取，請參考原始 PDF）';return `<label class="option ${q.options[k]?'':'missing'}"><input type="radio" name="q${i}" value="${k}"><span><b>${k}.</b> ${escapeHtml(val)}</span></label>`}).join('');return `<article class="card question"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(q.question||'請參考原始 PDF 題目')}</div></div><div class="options">${opts}</div></article>`}).join('');
-      $('#submit').onclick=submitQuiz; $('#backTop').onclick=()=>{ $('#quiz').hidden=true; window.scrollTo({top:0,behavior:'smooth'}); };
-      window.scrollTo({top:0,behavior:'smooth'});
-    }
-    function answerSet(s){if(!s||s==='送分')return [];return s.replaceAll('或','、').replaceAll('/','、').split(/[、,\s]+/).filter(Boolean)}
-    function optionLabel(q,keys){
-      if(keys==='送分')return '送分題（自動計入答對）';
-      const list=answerSet(keys); return list.length?list.map(k=>`${k}. ${q.options[k]||'（選項文字未擷取）'}`).join('；'):'未作答';
-    }
-    function markAnswerOptions(){
-      current.questions.forEach((q,i)=>{
-        const correct=answerSet(q.answer); document.querySelectorAll(`input[name=q${i}]`).forEach(input=>{const label=input.closest('label'); if(correct.includes(input.value))label.classList.add('answer-correct'); if(input.checked&&correct.length&&!correct.includes(input.value))label.classList.add('answer-wrong'); input.disabled=true;});
-      });
-    }
-    function submitQuiz(){
-      const wrong=[]; const attempts=[]; let answered=0; let unanswered=0; let bonus=0;
-      current.questions.forEach((q,i)=>{
-        const el=document.querySelector(`input[name=q${i}]:checked`); const chosen=el?el.value:''; const correct=answerSet(q.answer); const isBonus=!correct.length; const isCorrect=isBonus||(!!chosen&&correct.includes(chosen));
-        if(chosen)answered++; else unanswered++; if(isBonus)bonus++;
-        attempts.push({q,chosen,correct:q.answer,isBonus,isCorrect});
-        if(!isBonus&&!isCorrect)wrong.push({key:`${current.id}-${q.number}`,setId:current.id,session:current.session,sheet:current.sheet,number:q.number,question:q.question,selected:chosen||'未作答',correct:q.answer,pdf:current.pdf,at:new Date().toISOString()});
-      });
-      const old=getWrong(); const merged=[...old.filter(x=>!wrong.some(y=>y.key===x.key)),...wrong]; saveWrong(merged); saveCompleted(current.id); const selectedOption=$('#sheet').selectedOptions[0]; if(selectedOption)selectedOption.textContent=`${current.id}（已作答）`; refreshStats();
-      const score=attempts.filter(x=>x.isCorrect).length; const incorrect=attempts.filter(x=>!x.isBonus&&x.chosen&&!x.isCorrect).length; const result=document.createElement('div'); result.className='result'; result.innerHTML=`<strong>答對 ${score} 題／${current.questions.length} 題</strong><div class="sub">已作答 ${answered} 題，其中答錯 ${incorrect} 題；未作答 ${unanswered} 題。${bonus?`送分題 ${bonus} 題已自動計入答對。`:''} 錯題已更新至「錯題紀錄」。</div>`; $('#quiz').prepend(result);
-      $('#submit').disabled=true; $('#submit').textContent='已完成'; markAnswerOptions();
-      const review=document.createElement('div'); review.className='card review'; review.innerHTML='<h3 style="padding:16px 20px;margin:0">本次檢討（完整作答與正確答案）</h3>'+attempts.map(({q,chosen,correct,isBonus,isCorrect})=>{const status=isBonus?'送分':isCorrect?'答對':chosen?'答錯':'未作答'; const cls=isCorrect?'right':'wrong'; return `<div class="review-item"><div><span class="${cls}">第 ${q.number} 題｜${status}</span></div><p><b>題目：</b>${escapeHtml(q.question)}</p><p><b>我的作答：</b>${escapeHtml(optionLabel(q,chosen))}<br><b>正確答案：</b>${escapeHtml(optionLabel(q,correct))}</p></div>`}).join(''); $('#quiz').append(review); result.scrollIntoView({behavior:'smooth'});
-    }
-    function renderWrong(){const list=getWrong();$('#wrongList').innerHTML=list.length?list.slice().reverse().map(w=>`<article class="wrong-card"><h3>${escapeHtml(w.session)}・${escapeHtml(label(w.sheet))}<span class="badge">第 ${w.number} 題</span></h3><p>${escapeHtml(w.question)}</p><p class="meta">你的答案：<b class="wrong">${w.selected}</b>　正確答案：<b class="right">${w.correct}</b>　<a class="source" href="${PDF_PREFIX}${encodeURI(w.pdf)}" target="_blank">查看原始 PDF</a></p></article>`).join(''):'<div class="empty">目前還沒有錯題紀錄。完成一張試券後，答錯題目會自動出現在這裡。</div>';}
-    $$('.tab').forEach(b=>b.onclick=()=>{$$('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('.view').forEach(x=>x.classList.remove('active'));$('#'+b.dataset.view).classList.add('active');if(b.dataset.view==='wrong')renderWrong();});
-    $('#start').onclick=()=>{current=DATA.find(x=>x.id===$('#sheet').value);if(current)renderQuiz();}; $('#clearWrong').onclick=()=>{if(confirm('確定要清除所有錯題紀錄嗎？')){localStorage.removeItem(WRONG_KEY);refreshStats();renderWrong();}};
-    document.addEventListener('DOMContentLoaded',()=>{updateFilters();refreshStats();});
-  </script>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <script src="./data_set/quiz-data.js"></script>
+  <script src="src/app.js"></script>
 </body>
 </html>

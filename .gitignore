@@ -1,0 +1,17 @@
+# Generated Pages artifact and test output
+/dist/
+/test-results/
+/data_set/interim/
+# Dependencies and caches
+**/node_modules/
+**/__pycache__/
+*.pyc
+*.inspect.ndjson
+# Local credentials and editor files
+.env
+.env.*
+!.env.example
+/.openai/
+.DS_Store
+Thumbs.db
+~$*

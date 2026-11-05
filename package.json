@@ -1,0 +1,16 @@
+{
+  "name": "past-exam-practice-of-site-supervisor",
+  "version": "2.6.8",
+  "private": true,
+  "description": "Past Exam Practice of Site Supervisor \u2014 GitHub Pages website.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node scripts/run_browser_tests.cjs",
+    "build": "python scripts/prepare_site.py"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
