@@ -157,7 +157,7 @@ body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .quiz-actio
 @media(min-width:1100px){body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .shell{max-width:none;margin-left:0;margin-right:390px;padding-right:var(--paper-gap)}}
 
 #builder h2,.search-result h3{margin:0 0 10px}
-.search-form{display:grid;grid-template-columns:2fr 1fr 1fr auto;align-items:end;gap:12px}
+.search-form{display:grid;grid-template-columns:2fr repeat(3,minmax(0,1fr)) auto;align-items:end;gap:12px}
 #searchTerm,#groupName{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--ink);font:inherit}
 #searchTerm:focus-visible,#groupName:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
 .search-result{margin:12px 0;padding:16px 20px;overflow-wrap:anywhere}
@@ -175,11 +175,14 @@ body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .quiz-actio
   padding:8px 16px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);box-shadow:var(--shadow)}
 .selection-bar button,.selection-dialog button,.search-actions button,.search-form button{min-height:44px}
 .selection-dialog{width:min(560px,calc(100% - 24px));max-height:calc(100% - 32px);padding:16px 20px;color:var(--ink)}
-.selection-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;overflow:hidden}
+.selection-dialog[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px;overflow:hidden}
 .selection-dialog::backdrop{background:#0009}
 .selection-heading,.selection-actions{justify-content:space-between}
 .selection-dialog .selection-heading h2{margin:0;min-width:0;overflow-wrap:anywhere}
 #selectionItems{overflow:auto;overscroll-behavior:contain}
+.classification-paper{display:flex;align-items:center;gap:12px}
+.classification-paper label{margin:0}
+.classification-paper select{width:auto}
 .selection-tools,.custom-attempt-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .selection-footer{border-top:1px solid var(--line);padding-top:10px}
 .save-group-form,.classification-fields{display:grid;gap:8px}
@@ -201,7 +204,7 @@ body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .quiz-actio
 .wrong-review-filter input{accent-color:var(--brand)}
 @media(max-width:650px){
   .search-form{grid-template-columns:1fr 1fr}
-  .search-form>.field:first-child,.search-form>button{grid-column:1/-1}
+  .search-form>.field:first-child{grid-column:1/-1}
 }
 @media(max-width:480px){
   .classification-fields{grid-template-columns:minmax(0,1fr) auto}

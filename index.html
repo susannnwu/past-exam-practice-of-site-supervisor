@@ -44,6 +44,7 @@
           <div class="field"><label for="searchTerm">關鍵字</label><input id="searchTerm" type="search" placeholder="例如：混凝土" aria-describedby="searchHelp"></div>
           <div class="field"><label for="searchYear">年份</label><select id="searchYear"></select></div>
           <div class="field"><label for="searchSession">考試場次</label><select id="searchSession"></select></div>
+          <div class="field"><label for="searchPaper">卷別</label><select id="searchPaper"><option value="">全部卷別</option><option value="A">A 卷</option><option value="B">B 卷</option></select></div>
           <button class="primary" type="submit">搜尋</button>
         </form>
         <p class="hint" id="searchHelp">比對題幹、選項與共用情境的文字。圖表及掃描圖中的文字可能無法搜尋。</p>
@@ -73,6 +74,7 @@
             <button id="closeSelection" class="secondary" type="button" autofocus>關閉</button>
           </div>
         </div>
+        <div class="field classification-paper"><label for="classificationPaper">挑題卷別</label><select id="classificationPaper"><option value="">全部卷別</option><option value="A">A 卷</option><option value="B">B 卷</option></select></div>
         <div id="selectionItems"></div>
         <div class="selection-footer">
           <form id="saveGroupForm" class="save-group-form">

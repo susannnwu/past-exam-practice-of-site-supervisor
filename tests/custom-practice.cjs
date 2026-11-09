@@ -73,6 +73,56 @@ async function verifyBulk(page,search){
   await page.locator('[data-view=builder]').click();
 }
 
+async function verifyPaperFilter(page,search){
+  const paper=page.locator('#searchPaper'),cards=page.locator('.search-result');
+  await search('ＣＣＤ');
+  assert.equal(await paper.inputValue(),'');
+  assert.equal(await cards.count(),2);
+  await paper.selectOption('A');
+  assert.equal(await cards.count(),1);
+  assert.match(await cards.first().locator('h3').textContent(),/第1類科A卷・原卷第 1 題/);
+  await page.locator('#addSearchPage').click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 1 題');
+  await paper.selectOption('B');
+  assert.equal(await cards.count(),1);
+  assert.match(await cards.first().locator('h3').textContent(),/第1類科B卷・原卷第 16 題/);
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 1 題');
+  await page.locator('#addSearchAll').click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 2 題');
+  await page.locator('#viewSelection').click();
+  await page.selectOption('#classificationPaper','A');
+  assert.equal(await page.locator('[data-classify-item]').count(),1);
+  assert.equal(await page.locator('#classificationCount').textContent(),'勾選 1 題供分類');
+  await page.selectOption('#classificationPaper','B');
+  assert.equal(await page.locator('#classificationCount').textContent(),'勾選 0 題供分類');
+  await page.locator('#checkAllGroups').click();
+  assert.equal(await page.locator('#classificationCount').textContent(),'勾選 1 題供分類');
+  await page.locator('#closeSelection').click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 2 題');
+
+  await search('混凝土');
+  for(const session of ['112年第2次','112年第3次','114年第3次']){
+    await page.selectOption('#searchYear',session.slice(0,3));
+    await page.selectOption('#searchSession',session);
+    for(const variant of ['A','B']){
+      await paper.selectOption(variant);
+      const matchingPapers=await page.evaluate(()=>[...new Set(searchHits.map(hit=>hit.group.exam.sheet))]);
+      assert(matchingPapers.length>0,session+variant);
+      assert(matchingPapers.every(sheet=>sheet.replace(/[卷）)]$/,'').endsWith(variant)),session+variant);
+    }
+  }
+  await page.selectOption('#searchYear','115');
+  await page.selectOption('#searchSession','115年第1次');
+  await search('潛盾');
+  assert.equal(await paper.inputValue(),'B');
+  assert((await cards.count())>0);
+  for(const title of await cards.locator('h3').allTextContents())assert.match(title,/B卷・/);
+  await cards.filter({hasText:'第1類科B卷・原卷第 38、39 題'}).getByRole('button',{name:'加入整組 2 題'}).click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 4 題');
+  await page.reload();
+  await page.locator('[data-view=builder]').click();
+}
+
 async function verify(browser,entry,width){
   const context=await browser.newContext({viewport:{width,height:844},colorScheme:width===390?'dark':'light'});
   const page=await context.newPage();
@@ -104,6 +154,7 @@ async function verify(browser,entry,width){
   assert(await page.locator('#startCustom').isDisabled());
   await page.keyboard.press('Escape');
   await verifyBulk(page,search);
+  await verifyPaperFilter(page,search);
   await search('ＣＣＤ');
   assert.equal(await cards.count(),2);
   const first=cards.filter({hasText:'111年第1次・第1類科A卷・原卷第 1 題'});
@@ -352,9 +403,14 @@ async function verifyNamedGroups(browser,entry,width){
   assert.deepEqual(await groupItems('測量乙'),[...second,...saved[1].items]);
   const mixed=page.locator('.custom-attempts').filter({has:page.getByRole('heading',{name:'測量乙・3 題',exact:true})});
   await mixed.getByRole('button',{name:'挑題分類'}).click();
-  await page.getByRole('checkbox',{name:/第 32、33 題/}).check();
+  await page.selectOption('#classificationPaper','A');
+  assert.equal(await checks.count(),1);
+  await page.locator('#checkAllGroups').click();
+  assert.equal(await page.locator('#classificationCount').textContent(),'勾選 2 題供分類');
   await field.fill('情境專題');
   await save.click();
+  assert.match(await page.locator('#selectionTotal').textContent(),/顯示 A 卷 0 題/);
+  await page.selectOption('#classificationPaper','');
   assert.match(await page.locator('#selectionTotal').textContent(),/剩餘 1 題/);
   await page.locator('#closeSelection').click();
   assert.deepEqual(await groupItems('測量乙'),second);
@@ -365,6 +421,15 @@ async function verifyNamedGroups(browser,entry,width){
   await page.locator('[data-view=builder]').click();
   assert(await page.getByRole('heading',{name:'情境專題・2 題'}).isVisible());
   assert.deepEqual(await page.evaluate(()=>Object.keys(customDefinitions()).sort()),stored.filter(id=>id!=='custom-previous').sort());
+  await search('ＣＣＤ');
+  await page.locator('#addSearchAll').click();
+  await page.locator('#viewSelection').click();
+  await page.selectOption('#classificationPaper','B');
+  await page.getByRole('button',{name:'開始練習 B 卷'}).click();
+  assert.equal(await page.locator('#cards .question').count(),1);
+  assert.match(await page.locator('#cards .question-source').textContent(),/B卷/);
+  await page.locator('#backTop').click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 1 題');
   assert.deepEqual(errors,[]);
   await context.close();
 }
@@ -379,6 +444,6 @@ async function verifyNamedGroups(browser,entry,width){
         await verifyNamedGroups(browser,entry,width);
       }
     }
-    console.log('PASS: custom practice, bulk selection, clearing and saved groups across source and Pages builds at 390px and 1280px');
+    console.log('PASS: paper filtering, bulk selection, clearing and group classification across source and Pages builds at 390px and 1280px');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

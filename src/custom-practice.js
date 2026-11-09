@@ -129,6 +129,7 @@ function highlightMatch(value,term,snippet=false){
 }
 
 const sessionNumber=exam=>Number(exam.session.match(/第(\d+)次/)?.[1]||0);
+const paperVariant=exam=>exam.sheet.match(/([AB])(?:卷|[）)])?$/)?.[1]||'';
 const orderedExams=[...DATA].sort((a,b)=>Number(b.year)-Number(a.year)||sessionNumber(a)-sessionNumber(b)||
   a.sheet.localeCompare(b.sheet,'zh-Hant',{numeric:true}));
 
@@ -240,13 +241,13 @@ function addBulkResults(hits){
 
 function searchQuestions(){
   activeTerm=searchText($('#searchTerm').value);
-  const year=$('#searchYear').value,session=$('#searchSession').value;
+  const year=$('#searchYear').value,session=$('#searchSession').value,paper=$('#searchPaper').value;
   searchPage=0;
   searchHits=[];
   if(activeTerm){
     searchIndex??=buildSearchIndex();
     for(const group of searchIndex){
-      if(year&&group.exam.year!==year||session&&group.exam.session!==session)continue;
+      if((year&&group.exam.year!==year)||(session&&group.exam.session!==session)||(paper&&paperVariant(group.exam)!==paper))continue;
       const matches=group.fields.filter(field=>field.normalized.includes(activeTerm));
       if(matches.length)searchHits.push({group,matches});
     }
@@ -263,8 +264,13 @@ const classificationGroups=()=>classificationSource?.groups||selection;
 const questionRefs=groups=>[...groups].flatMap(({exam,items})=>items.map(q=>({examId:exam.id,number:q.number})));
 const originKey=origin=>JSON.stringify([origin.examId,origin.number]);
 
+function visibleClassificationGroups(){
+  const groups=classificationGroups(),paper=$('#classificationPaper').value;
+  return paper?new Map([...groups].filter(([,group])=>paperVariant(group.exam)===paper)):groups;
+}
+
 function updateClassificationControls(){
-  const groups=classificationGroups();
+  const groups=visibleClassificationGroups();
   const count=[...groups].reduce((sum,[key,group])=>sum+(checkedGroups.has(key)?group.items.length:0),0);
   const newGroup=!$('#groupDestination').value;
   $('#classificationCount').textContent=`勾選 ${count} 題供分類`;
@@ -277,20 +283,24 @@ function updateClassificationControls(){
 }
 
 function renderClassification(){
-  const groups=classificationGroups();
+  const groups=visibleClassificationGroups();
   const source=classificationSource;
+  const paper=$('#classificationPaper').value;
+  const visibleCount=[...groups.values()].reduce((count,group)=>count+group.items.length,0);
   $('#selectionTitle').textContent=source?`分類「${source.name}」`:'本次題單';
   $('#clearSelection').hidden=!!source;
-  $('#clearSelection').disabled=!groups.size;
+  $('#clearSelection').disabled=!selection.size;
   $('#startCustom').hidden=!!source;
-  $('#startCustom').disabled=!selection.size;
-  if(source)$('#selectionTotal').textContent=`來源題組剩餘 ${questionRefs(groups.values()).length} 題`;
+  $('#startCustom').disabled=!groups.size;
+  $('#startCustom').textContent=paper?`開始練習 ${paper} 卷`:'開始練習';
+  if(paper)$('#selectionTotal').textContent=`顯示 ${paper} 卷 ${visibleCount} 題`;
+  else if(source)$('#selectionTotal').textContent=`來源題組剩餘 ${visibleCount} 題`;
   $('#saveGroup').textContent=source?'移動勾選題目':'儲存勾選題目';
   $('#selectionItems').innerHTML=[...groups].map(([key,group],index)=>`<div class="saved-row">
     <label class="classification-item"><input type="checkbox" data-classify-item="${index}" ${checkedGroups.has(key)?'checked':''}>
       <span><b>${escapeHtml(resultTitle(group))}</b><small>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</small></span></label>
     ${source?'':`<button class="secondary" data-remove-result="${index}" aria-label="移除 ${escapeHtml(resultTitle(group))}">移除</button>`}</div>`).join('')||
-    (source?'<p class="hint">來源題組已無待分類的題目。</p>':'<p class="hint">請先從搜尋結果加入題目。</p>');
+    (paper?'<p class="hint">所選卷別沒有題目。</p>':source?'<p class="hint">來源題組已無待分類的題目。</p>':'<p class="hint">請先從搜尋結果加入題目。</p>');
   updateClassificationControls();
 }
 
@@ -303,6 +313,7 @@ function refreshGroupDestinations(){
 function openClassification(source=null){
   classificationSource=source;
   checkedGroups.clear();
+  $('#classificationPaper').value='';
   if(!source)for(const key of selection.keys())checkedGroups.add(key);
   $('#groupName').value='';
   $('#selectionNotice').textContent='';
@@ -378,9 +389,10 @@ function saveNamedGroup(event){
 }
 
 function startCustomPractice(){
-  if(!selection.size)return;
+  const groups=[...visibleClassificationGroups()];
+  if(!groups.length)return;
   const id=newPracticeId();
-  const definition={items:questionRefs(selection.values()),createdAt:new Date().toISOString()};
+  const definition={items:questionRefs(groups.map(([,group])=>group)),createdAt:new Date().toISOString()};
   if(!writeStore(CUSTOM_PRACTICES_KEY,{...customDefinitions(),[id]:definition})){
     $('#selectionNotice').textContent='目前無法儲存作答進度，題單仍保留。';return;
   }
@@ -391,7 +403,7 @@ function startCustomPractice(){
     $('#selectionNotice').textContent='目前無法開始練習，題單仍保留。';
     return;
   }
-  selection.clear();
+  for(const [key] of groups)selection.delete(key);
   $('#selectionDialog').close();
   selectionChanged();
   $('#quiz h2').focus({preventScroll:true});
@@ -406,6 +418,7 @@ function updateSearchSessions(){
 updateSearchSessions();
 $('#searchYear').onchange=()=>{updateSearchSessions();searchQuestions();};
 $('#searchSession').onchange=searchQuestions;
+$('#searchPaper').onchange=searchQuestions;
 $('#searchForm').onsubmit=event=>{event.preventDefault();searchQuestions();$('#searchSummary').focus();};
 $('#searchResults').onclick=event=>{
   const button=event.target.closest('[data-add-result]');
@@ -434,10 +447,15 @@ $('#clearSelection').onclick=()=>{
 };
 $('#saveGroupForm').onsubmit=saveNamedGroup;
 $('#groupDestination').onchange=updateClassificationControls;
+$('#classificationPaper').onchange=()=>{
+  const visible=visibleClassificationGroups();
+  for(const key of checkedGroups)if(!visible.has(key))checkedGroups.delete(key);
+  renderSelection();
+};
 for(const [id,checked] of [['checkAllGroups',true],['uncheckAllGroups',false]]){
   $('#'+id).onclick=()=>{
     checkedGroups.clear();
-    if(checked)for(const key of classificationGroups().keys())checkedGroups.add(key);
+    if(checked)for(const key of visibleClassificationGroups().keys())checkedGroups.add(key);
     $$('[data-classify-item]').forEach(input=>{input.checked=checked;});
     updateClassificationControls();
   };
@@ -446,7 +464,7 @@ $('#viewCustomHistory').onclick=()=>$('#customHistory').focus();
 $('#selectionItems').onchange=event=>{
   const input=event.target.closest('[data-classify-item]');
   if(!input)return;
-  const key=[...classificationGroups().keys()][Number(input.dataset.classifyItem)];
+  const key=[...visibleClassificationGroups().keys()][Number(input.dataset.classifyItem)];
   if(input.checked)checkedGroups.add(key);else checkedGroups.delete(key);
   updateClassificationControls();
 };
@@ -454,7 +472,7 @@ $('#selectionItems').onclick=event=>{
   const button=event.target.closest('[data-remove-result]');
   if(!button)return;
   const index=Number(button.dataset.removeResult);
-  const key=[...selection.keys()][index];
+  const key=[...visibleClassificationGroups().keys()][index];
   selection.delete(key);
   checkedGroups.delete(key);
   selectionChanged();
