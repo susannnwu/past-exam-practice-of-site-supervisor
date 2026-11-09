@@ -21,7 +21,7 @@
       <div class="brand"><h1>工地主任歷屆試題模擬練習</h1><p>挑選試券、完成作答，錯題會自動保存在這台裝置。</p></div>
       <div class="stats"><div class="stat"><b id="setCount">48</b><span>張試券</span></div><div class="stat"><b id="questionCount">2,400</b><span>題目</span></div><div class="stat"><b id="wrongCount">0</b><span>錯題紀錄</span></div></div>
     </header>
-    <nav class="tabs"><button class="tab active" data-view="home">選擇試券</button><button class="tab" data-view="wrong">錯題紀錄 <span id="wrongBadge"></span></button><button class="tab" data-view="marked">已標記題目 <span id="markedBadge"></span></button></nav>
+    <nav class="tabs"><button class="tab active" data-view="home">選擇試券</button><button class="tab" data-view="builder">搜尋組卷</button><button class="tab" data-view="wrong">錯題紀錄 <span id="wrongBadge"></span></button><button class="tab" data-view="marked">已標記題目 <span id="markedBadge"></span></button></nav>
 
     <main id="home" class="view active">
       <section class="card controls">
@@ -35,6 +35,37 @@
       <section id="savedProgress" class="card progress-panel"></section>
       <section id="examHistory" class="card progress-panel" hidden></section>
       <section id="quiz" hidden></section>
+    </main>
+
+    <main id="builder" class="view">
+      <section class="card progress-panel">
+        <h2>搜尋組卷</h2>
+        <form id="searchForm" class="search-form">
+          <div class="field"><label for="searchTerm">關鍵字</label><input id="searchTerm" type="search" placeholder="例如：混凝土" aria-describedby="searchHelp"></div>
+          <div class="field"><label for="searchYear">年份</label><select id="searchYear"></select></div>
+          <div class="field"><label for="searchSession">考試場次</label><select id="searchSession"></select></div>
+          <button class="primary" type="submit">搜尋</button>
+        </form>
+        <p class="hint" id="searchHelp">比對題幹、選項與共用情境的文字。圖表及掃描圖中的文字可能無法搜尋。</p>
+        <button id="viewCustomHistory" class="secondary">查看我的組卷紀錄</button>
+      </section>
+      <p id="searchSummary" class="hint" role="status" tabindex="-1"></p>
+      <div id="searchResults"></div>
+      <nav id="searchPages" class="search-pages" aria-label="搜尋結果分頁" hidden>
+        <button id="searchPrevious" class="secondary">上一頁</button>
+        <span id="searchPageNumber"></span>
+        <button id="searchNext" class="secondary">下一頁</button>
+      </nav>
+      <section class="card progress-panel" id="customHistory" tabindex="-1"></section>
+      <div id="selectionBar" class="selection-bar">
+        <span id="selectionCount" role="status">已選 0 題</span>
+        <button id="viewSelection" class="secondary">查看題單</button>
+      </div>
+      <dialog id="selectionDialog" class="card selection-dialog" aria-labelledby="selectionTitle">
+        <div class="selection-heading"><h2 id="selectionTitle">本次題單</h2><button id="closeSelection" class="secondary" autofocus>關閉</button></div>
+        <div id="selectionItems"></div>
+        <div class="selection-actions"><p id="selectionTotal" class="hint" role="status"></p><button id="startCustom" class="primary" disabled>開始練習</button></div>
+      </dialog>
     </main>
 
     <main id="wrong" class="view">
@@ -57,5 +88,6 @@
   <div id="notice" role="status" aria-live="polite"></div>
   <script src="./data_set/quiz-data.js"></script>
   <script src="src/app.js"></script>
+  <script src="src/custom-practice.js"></script>
 </body>
 </html>

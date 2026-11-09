@@ -25,7 +25,7 @@ def build():
     site.mkdir(parents=True,exist_ok=True)
     # dist is a disposable CI build artifact, not a versioned user delivery.
     expected={'index.html':html,'LICENSE':(ROOT/'LICENSE').read_bytes(),'.nojekyll':b''}
-    for name in ['src/styles.css','src/app.js']:expected[name]=(ROOT/name).read_bytes()
+    for name in ['src/styles.css','src/app.js','src/custom-practice.js']:expected[name]=(ROOT/name).read_bytes()
     for p in assets:expected['data_set/'+p.relative_to(data_root).as_posix()]=p.read_bytes()
     existing={p.relative_to(site).as_posix():p for p in site.rglob('*') if p.is_file()}
     assert not (existing.keys()-expected.keys()),'Unexpected files in public bundle'

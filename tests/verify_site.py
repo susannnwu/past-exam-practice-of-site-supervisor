@@ -14,7 +14,7 @@ images={x['source']['image'] for e in data for x in e['questions']+e['scenarios'
 pdfs=list((ROOT/'data_set').rglob('*.pdf'))
 assert len(data)==48 and sum(len(e['questions']) for e in data)==2400
 assert len(images)==410 and len(pdfs)==65
-paths=['index.html','src/app.js','src/styles.css','data_set/quiz-data.js','LICENSE']
+paths=['index.html','src/app.js','src/custom-practice.js','src/styles.css','data_set/quiz-data.js','LICENSE']
 paths+=['data_set/'+p.relative_to(ROOT/'data_set').as_posix() for p in pdfs]
 paths+=['data_set/'+p for p in sorted(images)]
 expected=set(paths)|{'.nojekyll'}

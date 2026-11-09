@@ -11,7 +11,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
     function fill(select,values,placeholder,display=v=>v){select.innerHTML=`<option value="">${placeholder}</option>`+values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(display(v))}</option>`).join('');}
     function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     function splitQuestion(q,exam=current){
-      const scenario=exam?.scenarios?.find(s=>s.id===q.scenarioId);
+      const scenario=sourceExam(q,exam)?.scenarios?.find(s=>s.id===q.scenarioId);
       return {scenario:scenario?.text||'',text:q.question||'',group:scenario};
     }
     function sourceImage(source,alt){
@@ -25,7 +25,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
     function questionGroups(qs){
       const groups=[]; let current=null;
       qs.forEach((q,i)=>{
-        const part=splitQuestion(q), key=q.scenarioId;
+        const part=splitQuestion(q), key=part.group&&JSON.stringify([q.origin?.examId,q.scenarioId]);
         if(key){
           if(!current||current.id!==key){current={id:key,scenario:part.scenario,group:part.group,items:[]};groups.push(current);}
           current.items.push({q,i,text:part.text});
@@ -42,11 +42,13 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
     }
     function renderQuiz(){
       showView('home');document.body.classList.add('quiz-mode');
-      $('#year').value=current.year;$('#year').onchange();$('#sheet').value=current.id;renderExamHistory();
-      const qs=current.questions; $('#quiz').hidden=false; $('#quiz').innerHTML=`<div class="quiz-top"><div><h2>${escapeHtml(current.session)}・${escapeHtml(label(current.sheet))}</h2><p>共 ${qs.length} 題｜<a class="source" href="${PDF_PREFIX}${encodeURI(current.pdf)}" target="_blank">開啟原始 PDF</a></p></div></div><div class="quiz-actions" role="region" aria-label="作答操作列"><div class="timer-block"><b id="timer">00:00</b><span id="runLabel"></span><small id="timerNote">／90:00</small></div><span id="answerProgress"></span><button class="secondary" id="backTop">回到選卷</button><button class="secondary" id="savePause">儲存並暫停</button><button class="primary" id="submit">交卷並檢討</button></div><div id="cards"></div>`;
-      const renderQuestion=({q,i,text})=>{const opts=['A','B','C','D'].map(k=>{const val=q.options[k]||'（本題排版未完整擷取，請參考原始 PDF）';return `<label class="option ${q.options[k]?'':'missing'}"><input type="radio" name="q${i}" value="${k}"><span><b>${k}.</b> ${escapeHtml(val)}</span></label>`}).join('');return `<article class="card question" data-number="${q.number}"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(text||'請參考原始 PDF 題目')}</div></div>${renderMarkers(q)}${sourceImage(q.source,`第 ${q.number} 題原卷圖表與選項`)}${q.sourceNote?`<p class="source-note">${escapeHtml(q.sourceNote)}</p>`:''}<div class="options">${opts}</div></article>`;};
+      if(!current.custom){$('#year').value=current.year;$('#year').onchange();$('#sheet').value=current.id;renderExamHistory();}
+      const headingText=current.custom?'自組練習':`${current.session}・${label(current.sheet)}`;
+      const source=current.custom?'':`｜<a class="source" href="${PDF_PREFIX}${encodeURI(current.pdf)}" target="_blank">開啟原始 PDF</a>`;
+      const qs=current.questions; $('#quiz').hidden=false; $('#quiz').innerHTML=`<div class="quiz-top"><div><h2>${escapeHtml(headingText)}</h2><p>共 ${qs.length} 題${source}</p></div></div><div class="quiz-actions" role="region" aria-label="作答操作列"><div class="timer-block"><b id="timer">00:00</b><span id="runLabel"></span><small id="timerNote">／90:00</small></div><span id="answerProgress"></span><button class="secondary" id="backTop">${current.custom?'回到搜尋組卷':'回到選卷'}</button><button class="secondary" id="savePause">儲存並暫停</button><button class="primary" id="submit">交卷並檢討</button></div><div id="cards"></div>`;
+      const renderQuestion=({q,i,text})=>{const opts=['A','B','C','D'].map(k=>{const val=q.options[k]||'（本題排版未完整擷取，請參考原始 PDF）';return `<label class="option ${q.options[k]?'':'missing'}"><input type="radio" name="q${i}" value="${k}"><span><b>${k}.</b> ${escapeHtml(val)}</span></label>`}).join('');return `<article class="card question" data-number="${q.number}"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(text||'請參考原始 PDF 題目')}</div></div>${questionSource(q)}${renderMarkers(q)}${sourceImage(q.source,`第 ${q.number} 題原卷圖表與選項`)}${q.sourceNote?`<p class="source-note">${escapeHtml(q.sourceNote)}</p>`:''}<div class="options">${opts}</div></article>`;};
       $('#cards').innerHTML=questionGroups(qs).map(g=>g.group?`<section class="scenario-group">${renderScenario(g.group)}${g.items.map(renderQuestion).join('')}</section>`:g.items.map(renderQuestion).join('')).join('');
-      $('#submit').onclick=submitQuiz; $('#backTop').onclick=()=>{if(run&&!run.submitted&&!pauseRun())return;showView('home');renderSavedProgress();$('#start').focus({preventScroll:true});window.scrollTo({top:0,behavior:'instant'});};
+      $('#submit').onclick=submitQuiz; $('#backTop').onclick=()=>{if(run&&!run.submitted&&!pauseRun())return;showView(current.custom?'builder':'home');if(current.custom)renderCustomHistory();else renderSavedProgress();$(current.custom?'#searchTerm':'#start').focus({preventScroll:true});window.scrollTo({top:0,behavior:'instant'});};
       $('#savePause').onclick=()=>run?.runningSince?pauseRun():resumeActive();
       window.quizBarObserver?.disconnect();
       const bar=$('.quiz-actions');
@@ -76,39 +78,45 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
         const el=document.querySelector(`input[name=q${i}]:checked`); const chosen=el?el.value:''; const correct=answerSet(q.answer); const isBonus=q.answer==='送分'; const isCorrect=isBonus||(!!chosen&&correct.includes(chosen));
         if(chosen)answered++; else unanswered++; if(isBonus)bonus++;
         attempts.push({q,chosen,correct:q.answer,isBonus,isCorrect});
-        if(!isBonus&&!isCorrect)wrong.push({key:`${current.id}-${q.number}`,setId:current.id,session:current.session,sheet:current.sheet,number:q.number,question:q.question,selected:chosen||'未作答',correct:q.answer,pdf:current.pdf,at:new Date().toISOString()});
+        if(!current.custom&&!isBonus&&!isCorrect)wrong.push({key:`${current.id}-${q.number}`,setId:current.id,session:current.session,sheet:current.sheet,number:q.number,question:q.question,selected:chosen||'未作答',correct:q.answer,pdf:current.pdf,at:new Date().toISOString()});
       });
       if(!finishRun(attempts))return;
-      const history=getAttempts(); history[current.id]=Object.fromEntries(attempts.map(a=>[a.q.number,{selected:a.chosen,correct:a.correct,isCorrect:a.isCorrect,isBonus:a.isBonus}])); localStorage.setItem(ATTEMPTS_KEY,JSON.stringify(history));
-      const old=getWrong(); const merged=[...old.filter(x=>!wrong.some(y=>y.key===x.key)),...wrong]; saveWrong(merged); saveCompleted(current.id); const selectedOption=[...$('#sheet').options].find(o=>o.value===current.id); if(selectedOption)selectedOption.textContent=sheetLabel(current.id); refreshStats();
+      if(!current.custom){
+        const history=getAttempts(); history[current.id]=Object.fromEntries(attempts.map(a=>[a.q.number,{selected:a.chosen,correct:a.correct,isCorrect:a.isCorrect,isBonus:a.isBonus}])); localStorage.setItem(ATTEMPTS_KEY,JSON.stringify(history));
+        const old=getWrong(); const merged=[...old.filter(x=>!wrong.some(y=>y.key===x.key)),...wrong]; saveWrong(merged); saveCompleted(current.id); const selectedOption=[...$('#sheet').options].find(o=>o.value===current.id); if(selectedOption)selectedOption.textContent=sheetLabel(current.id); refreshStats();
+      }
       renderResults(attempts,run);renderSavedProgress();renderExamHistory();
     }
-    function reviewOptions(q,chosen){
-      const correct=answerSet(q.answer);
-      return ['A','B','C','D'].map(k=>`<label class="option ${correct.includes(k)?'answer-correct':''} ${q.answer!=='送分'&&chosen===k&&!correct.includes(k)?'answer-wrong':''}"><input type="radio" disabled ${chosen===k?'checked':''}><span><b>${k}.</b> ${escapeHtml(q.options[k]||'（本題選項未完整擷取，請參考原始 PDF）')}</span></label>`).join('');
+    function reviewOptions(q,chosen,answer=q.answer){
+      const correct=answerSet(answer);
+      return ['A','B','C','D'].map(k=>`<label class="option ${correct.includes(k)?'answer-correct':''} ${answer!=='送分'&&chosen===k&&!correct.includes(k)?'answer-wrong':''}"><input type="radio" disabled ${chosen===k?'checked':''}><span><b>${k}.</b> ${escapeHtml(q.options[k]||'（本題選項未完整擷取，請參考原始 PDF）')}</span></label>`).join('');
     }
     function openAttemptReview(id,recordId){
       if(run&&!run.submitted&&!pauseRun())return;
-      const exam=DATA.find(e=>e.id===id),record=getRuns(id).find(r=>r.id===recordId);
-      if(!exam||!record)return;
+      const exam=findPractice(id),record=getRuns(id).find(r=>r.id===recordId);
+      if(!exam||!record){notify('這份練習目前無法開啟，已保留作答紀錄。');return;}
       if(!record.answers){showView('wrong');refreshWrongFilters(id,recordId);renderWrong();return;}
       current=exam;
       run={...record,setId:id,submitted:true,runningSince:null,answers:Object.fromEntries(Object.entries(record.answers).map(([n,a])=>[n,a.selected||''])),flags:{...record.flags},checks:{...record.checks},paper:structuredClone(record.paper||[])};
       renderQuiz();
-      const attempts=exam.questions.map(q=>{const a=record.answers[q.number];return {q,chosen:a?.selected||'',correct:q.answer,isBonus:q.answer==='送分',isCorrect:!!a?.isCorrect,unknown:!a};});
+      const attempts=exam.questions.map(q=>{
+        const a=record.answers[q.number],correct=exam.custom&&a?a.correct:q.answer;
+        return {q,chosen:a?.selected||'',correct,isBonus:correct==='送分',isCorrect:!!a?.isCorrect,unknown:!a};
+      });
       renderResults(attempts,record);
     }
     function renderResults(attempts,record){
       const answered=attempts.filter(a=>a.chosen).length,unanswered=attempts.filter(a=>!a.chosen&&!a.unknown).length,bonus=attempts.filter(a=>a.isBonus).length;
-      const score=attempts.filter(x=>x.isCorrect).length; const incorrect=attempts.filter(x=>!x.isBonus&&x.chosen&&!x.isCorrect).length; const result=document.createElement('div'); result.className='result'; result.innerHTML=`<h2 tabindex="-1">成績與檢討</h2><p>${escapeHtml(runName(record))}｜用時 ${record.elapsedMs==null?'未記錄':formatTime(record.elapsedMs)}</p><strong>得分 ${score*2}／${current.questions.length*2} 分</strong><p>答對 ${score-bonus} 題${bonus?`＋送分 ${bonus} 題`:""}／${current.questions.length} 題（每題 2 分）</p>${bonusNotice(current.questions)}<p class="encouragement">${encouragement(score*2,current.questions.length*2,answered)}</p><div class="sub">已作答 ${answered} 題，其中答錯 ${incorrect} 題；未作答 ${unanswered} 題。${record.corrected?'（依校正答案重新計分，原始紀錄保留。）':''}${attempts.some(a=>a.unknown)?'（舊紀錄不完整，無紀錄題目不推測作答。）':''}</div>`; $('#quiz .quiz-top').after(result);
+      const score=attempts.filter(x=>x.isCorrect).length; const incorrect=attempts.filter(x=>!x.isBonus&&x.chosen&&!x.isCorrect).length; const result=document.createElement('div'); result.className='result'; result.innerHTML=`<h2 tabindex="-1">成績與檢討</h2><p>${escapeHtml(runName(record))}｜用時 ${record.elapsedMs==null?'未記錄':formatTime(record.elapsedMs)}</p><strong>得分 ${score*2}／${current.questions.length*2} 分</strong><p>答對 ${score-bonus} 題${bonus?`＋送分 ${bonus} 題`:""}／${current.questions.length} 題（每題 2 分）</p>${bonusNotice(attempts.filter(a=>a.isBonus).map(a=>({number:a.q.number,answer:a.correct})))}<p class="encouragement">${encouragement(score*2,current.questions.length*2,answered)}</p><div class="sub">已作答 ${answered} 題，其中答錯 ${incorrect} 題；未作答 ${unanswered} 題。${record.corrected?'（依校正答案重新計分，原始紀錄保留。）':''}${attempts.some(a=>a.unknown)?'（舊紀錄不完整，無紀錄題目不推測作答。）':''}</div>`; $('#quiz .quiz-top').after(result);
       $('#submit').disabled=true; $('#submit').textContent='已完成'; markAnswerOptions(); updateRunUI();$('#runLabel').textContent=runName(record)+'・已交卷';if(record.elapsedMs==null)$('#timer').textContent='未記錄';
-      const renderAttempt=({q,i,text})=>{const {chosen,isBonus,unknown}=attempts[i]; return `<article class="card question review-item" id="review-question-${i}" tabindex="-1"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(text)}</div></div>${unknown?'<p class="hint">無作答紀錄</p>':isBonus?'<p class="hint">送分題（自動獲得 2 分）</p>':''}${sourceImage(q.source,`第 ${q.number} 題原卷圖表`)}<div class="options">${reviewOptions(q,chosen)}</div></article>`;};
+      const renderAttempt=({q,i,text})=>{const {chosen,correct,isBonus,unknown}=attempts[i]; return `<article class="card question review-item" id="review-question-${i}" tabindex="-1"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(text)}</div></div>${questionSource(q)}${unknown?'<p class="hint">無作答紀錄</p>':isBonus?'<p class="hint">送分題（自動獲得 2 分）</p>':''}${sourceImage(q.source,`第 ${q.number} 題原卷圖表`)}<div class="options">${reviewOptions(q,chosen,correct)}</div></article>`;};
       const review=document.createElement('div'); review.className='review'; review.innerHTML='<h3>本次檢討（完整作答與正確答案）</h3>'+questionGroups(current.questions).map(g=>g.group?`<section class="scenario-group">${renderScenario(g.group)}${g.items.map(renderAttempt).join('')}</section>`:g.items.map(renderAttempt).join('')).join(''); $('#quiz').append(review);
+      const revealReview=current.custom?addWrongReviewFilter(review,attempts):null;
       const overview=document.createElement('section');overview.id='reviewOverview';overview.className='card review-overview';overview.tabIndex=-1;
       overview.setAttribute('aria-label','答題結果一覽');
       overview.innerHTML='<h3>答題結果一覽</h3><p class="hint">點選題號查看下方檢討。○ 答對　✕ 答錯　— 未作答　★ 送分；⚑ 待檢查　✓ 已確認</p><div class="review-grid">'+attempts.map((a,i)=>{const state=a.unknown?'unanswered':a.isBonus?'bonus':a.isCorrect?'correct':a.chosen?'incorrect':'unanswered',symbol=a.unknown?'?':a.isBonus?'★':a.isCorrect?'○':a.chosen?'✕':'—',status=a.unknown?'無紀錄':a.isBonus?'送分':a.isCorrect?'答對':a.chosen?'答錯':'未作答';const flag=!!record.flags?.[a.q.number],check=!!record.checks?.[a.q.number],marks=[flag?'待檢查旗幟':'',check?'已確認勾選':''].filter(Boolean).join('，');return `<button type="button" class="review-jump ${state}" data-review-index="${i}" aria-label="第 ${a.q.number} 題，${status}${marks?'，'+marks:''}" aria-controls="review-question-${i}"><span>${a.q.number}</span><small>${symbol} ${status}</small><span class="overview-marks" aria-hidden="true">${flag?'<span data-snapshot-mark="flag">⚑</span>':''}${check?'<span data-snapshot-mark="check">✓</span>':''}</span></button>`;}).join('')+'</div>';
       result.after(overview);
-      const jumpTo=el=>{el.focus({preventScroll:true});el.scrollIntoView({block:'start',behavior:'instant'});};
+      const jumpTo=el=>{revealReview?.(el);el.focus({preventScroll:true});el.scrollIntoView({block:'start',behavior:'instant'});};
       overview.querySelectorAll('[data-review-index]').forEach(button=>button.onclick=()=>jumpTo(document.getElementById('review-question-'+button.dataset.reviewIndex)));
       const back=document.createElement('button');back.id='backOverview';back.type='button';back.className='primary';back.textContent='↑ 答題結果一覽';back.onclick=()=>jumpTo(overview);$('.quiz-actions').append(back);
       const retry=document.createElement('button');retry.id='retryExam';retry.type='button';retry.className='secondary';retry.textContent='再做一次';const reviewId=current.id;retry.onclick=()=>startExam(reviewId,true);$('.quiz-actions').insertBefore(retry,back);
@@ -141,6 +149,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
       showView(b.dataset.view);
       if(b.dataset.view==='wrong'){refreshWrongFilters();renderWrong();}
       if(b.dataset.view==='marked')renderMarked();
+      if(b.dataset.view==='builder')renderCustomHistory();
     });
     $('#start').onclick=()=>startExam($('#sheet').value);
     $('#clearWrong').onclick=()=>{
@@ -148,7 +157,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
       localStorage.removeItem(WRONG_KEY);
       localStorage.removeItem(COMPLETED_KEY);
       localStorage.removeItem(ATTEMPTS_KEY);
-      localStorage.removeItem(DRAFTS_KEY);localStorage.removeItem(RUNS_KEY);localStorage.removeItem(MARKS_KEY);run=null;current=null;$('#quiz').hidden=true;
+      localStorage.removeItem(DRAFTS_KEY);localStorage.removeItem(RUNS_KEY);localStorage.removeItem(MARKS_KEY);localStorage.removeItem(CUSTOM_PRACTICES_KEY);run=null;current=null;$('#quiz').hidden=true;
       for(const option of $('#sheet').options){if(option.value)option.textContent=option.value;}
       refreshStats();refreshWrongFilters();renderWrong();renderSavedProgress();renderExamHistory();renderMarked();syncMarkButtons();
     };
@@ -197,9 +206,12 @@ function captureAnswers(){
 function persistRun(){
   if(!run||run.submitted)return true;
   captureAnswers();
+  return saveDraft(run,elapsed());
+}
+function saveDraft(attempt,elapsedMs){
   const drafts=readStore(DRAFTS_KEY,{});
   // Store a paused checkpoint; closing/reloading never counts time away from the page.
-  drafts[current.id]={...run,elapsedMs:elapsed(),runningSince:null,savedAt:new Date().toISOString()};
+  drafts[attempt.setId]={...attempt,elapsedMs,runningSince:null,savedAt:new Date().toISOString()};
   return writeStore(DRAFTS_KEY,drafts);
 }
 function pauseRun(){
@@ -213,25 +225,29 @@ function resumeActive(){
   run.runningSince=Date.now();updateRunUI();persistRun();
 }
 function startExam(id,fresh=false){
-  const exam=DATA.find(e=>e.id===id);if(!exam){notify('請先選擇試卷。');return;}
+  const exam=findPractice(id);if(!exam){notify(id?'這份練習目前無法開啟，已保留作答紀錄。':'請先選擇試卷。');return false;}
   const draft=readStore(DRAFTS_KEY,{})[id];
   if(fresh&&!confirm(draft?'這張試卷已有未完成的進度。重新作答將取代該進度，確定要再做一次嗎？':'確定要再做一次嗎？將重新開始同一張試卷，答案與計時會歸零，歷次成績仍會保留。'))return;
   if(run&&!run.submitted&&!pauseRun())return;
-  if(draft&&!fresh){resumeExam(id);return;}
+  if(draft&&!fresh)return resumeExam(id);
+  const next={id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,setId:id,ordinal:nextOrdinal(id),answers:{},flags:{},checks:{},elapsedMs:0,runningSince:Date.now(),startedAt:new Date().toISOString(),submitted:false};
+  if(exam.custom&&!saveDraft(next,0))return false;
   current=exam;
-  run={id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,setId:id,ordinal:nextOrdinal(id),answers:{},flags:{},checks:{},elapsedMs:0,runningSince:Date.now(),startedAt:new Date().toISOString(),submitted:false};
+  run=next;
   renderQuiz();persistRun();renderSavedProgress();
+  return true;
 }
 function resumeExam(id){
   if(run&&!run.submitted&&!pauseRun())return;
-  const draft=readStore(DRAFTS_KEY,{})[id],exam=DATA.find(e=>e.id===id);
-  if(!draft||!exam)return;
+  const draft=readStore(DRAFTS_KEY,{})[id],exam=findPractice(id);
+  if(!draft||!exam){notify('這份進度目前無法開啟。');return false;}
   // A completed run can leave a draft only if storage cleanup failed.
   if(getRuns(id).some(x=>x.id===draft.id)){
     notify('這份進度已交卷，請從作答紀錄查看。');return;
   }
   current=exam;run={...draft,runningSince:Date.now(),submitted:false};
   showView('home');renderQuiz();persistRun();
+  return true;
 }
 function restoreAnswers(){
   if(!run)return;
@@ -239,8 +255,9 @@ function restoreAnswers(){
   current.questions.forEach((q,i)=>{$$(`input[name="q${i}"]`).forEach(el=>{el.checked=el.value===run.answers[q.number];});});
 }
 function renderMarkers(q,exam=current){
-  const m=getMarks()[`${exam.id}-${q.number}`]||{};
-  return `<div class="question-marks">${[['flags','flag','⚑','待檢查旗幟'],['checks','check','✓','已確認']].map(([type,cls,symbol,title])=>`<button type="button" class="mark ${cls}" data-mark="${type}" data-exam="${escapeHtml(exam.id)}" data-q="${q.number}" title="${title}" aria-label="第 ${q.number} 題${title}" aria-pressed="${!!m[type]}">${symbol}</button>`).join('')}</div>`;
+  const id=q.origin?.examId||exam.id,number=q.origin?.number??q.number;
+  const m=getMarks()[`${id}-${number}`]||{};
+  return `<div class="question-marks">${[['flags','flag','⚑','待檢查旗幟'],['checks','check','✓','已確認']].map(([type,cls,symbol,title])=>`<button type="button" class="mark ${cls}" data-mark="${type}" data-exam="${escapeHtml(id)}" data-q="${number}" title="${title}" aria-label="第 ${q.number} 題${title}" aria-pressed="${!!m[type]}">${symbol}</button>`).join('')}</div>`;
 }
 function bindQuizChanges(){
   $('#cards').onchange=()=>{captureAnswers();persistRun();updateRunUI();};
@@ -327,7 +344,7 @@ window.addEventListener('beforeunload',e=>{
 function getMarks(){
   const saved=readStore(MARKS_KEY,null);
   if(saved!==null)return saved;
-  const marks={},records=[];
+  const marks={},records=[],definitions=customDefinitions();
   for(const [id,rows] of Object.entries(readStore(RUNS_KEY,{}))){
     for(const row of rows)records.push({id,row,at:row.submittedAt||''});
   }
@@ -336,7 +353,8 @@ function getMarks(){
   for(const {id,row} of records){
     for(const type of ['flags','checks']){
       for(const [number,value] of Object.entries(row[type]||{})){
-        const key=`${id}-${number}`;
+        const origin=definitions[id]?.items[Number(number)-1];
+        const key=origin?`${origin.examId}-${origin.number}`:`${id}-${number}`;
         marks[key]={...marks[key],[type]:!!value};
       }
     }
@@ -347,7 +365,7 @@ function syncRunMarks(){
   if(!run||run.submitted||!current)return;
   const marks=getMarks();
   current.questions.forEach(q=>{
-    const m=marks[`${current.id}-${q.number}`]||{};
+    const m=marks[`${q.origin?.examId||current.id}-${q.origin?.number??q.number}`]||{};
     run.flags[q.number]=!!m.flags;run.checks[q.number]=!!m.checks;
   });
 }
@@ -364,7 +382,7 @@ document.addEventListener('click',e=>{
   const marks=getMarks(),key=`${id}-${n}`;
   marks[key]={...marks[key],[type]:!marks[key]?.[type]};
   if(!writeStore(MARKS_KEY,marks))return;
-  if(run&&!run.submitted&&current?.id===id){syncRunMarks();persistRun();updateRunUI();}
+  if(run&&!run.submitted&&(current?.id===id||current?.custom)){persistRun();updateRunUI();}
   syncMarkButtons();
   if($('#marked').classList.contains('active')){
     renderMarked();

@@ -4,7 +4,7 @@ const http=require('node:http');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
-const tests=['exam-view','footer-theme','history-review','review-overview','paper-layout','retry-exam','submit-confirm','theme'];
+const tests=['exam-view','footer-theme','history-review','review-overview','paper-layout','retry-exam','submit-confirm','theme','custom-practice'];
 const prefix='/'+require('../package.json').name+'/';
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.pdf':'application/pdf'};
 const server=http.createServer(async(req,res)=>{
