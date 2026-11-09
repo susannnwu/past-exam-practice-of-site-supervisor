@@ -134,8 +134,13 @@ function resultTitle(group){
   return `${examSourceLabel(group.exam)}・原卷第 ${group.items.map(q=>q.number).join('、')} 題`;
 }
 
+function currentSearchPage(){
+  const start=searchPage*searchPageSize;
+  return searchHits.slice(start,start+searchPageSize);
+}
+
 function renderSearchResults(){
-  const start=searchPage*searchPageSize,shown=searchHits.slice(start,start+searchPageSize);
+  const start=searchPage*searchPageSize,shown=currentSearchPage();
   const totalPages=Math.ceil(searchHits.length/searchPageSize);
   $('#searchSummary').textContent=!activeTerm?'請輸入要搜尋的關鍵字。':searchHits.length?
     `共 ${searchHits.length} 筆結果（情境題整組計一筆），顯示第 ${start+1}–${start+shown.length} 筆。`:
@@ -169,16 +174,43 @@ function renderSelection(){
   $('#selectionCount').textContent=`已選 ${count} 題`;
   $('#selectionTotal').textContent=`共 ${count} 題，滿分 ${count*2} 分`;
   $('#startCustom').disabled=!count;
-  $('#selectionItems').innerHTML=groups.map((group,index)=>`<div class="saved-row"><div><b>${escapeHtml(resultTitle(group))}</b>
-    <div>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</div></div>
-    <button class="secondary" data-remove-result="${index}" aria-label="移除 ${escapeHtml(resultTitle(group))}">移除</button></div>`).join('')||
-    '<p class="hint">請先從搜尋結果加入題目。</p>';
+  if($('#selectionDialog').open){
+    $('#selectionItems').innerHTML=groups.map((group,index)=>`<div class="saved-row"><div><b>${escapeHtml(resultTitle(group))}</b>
+      <div>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</div></div>
+      <button class="secondary" data-remove-result="${index}" aria-label="移除 ${escapeHtml(resultTitle(group))}">移除</button></div>`).join('')||
+      '<p class="hint">請先從搜尋結果加入題目。</p>';
+  }
   $$('[data-add-result]').forEach(button=>{
     const {group}=searchHits[Number(button.dataset.addResult)];
     const added=selection.has(group.key);
     button.textContent=added?'已加入':group.scenario?`加入整組 ${group.items.length} 題`:'加入練習';
     button.setAttribute('aria-disabled',String(added));
   });
+  $('#searchBulkActions').hidden=!searchHits.length;
+  updateBulkButton($('#addSearchPage'),'加入本頁',currentSearchPage());
+  updateBulkButton($('#addSearchAll'),'加入全部搜尋結果',searchHits);
+}
+
+function updateBulkButton(button,label,hits){
+  const count=hits.reduce((sum,{group})=>sum+(selection.has(group.key)?0:group.items.length),0);
+  button.textContent=`${label}（新增 ${count} 題）`;
+  button.setAttribute('aria-disabled',String(!count));
+}
+
+function addSearchHits(hits){
+  let added=0;
+  for(const {group} of hits){
+    if(selection.has(group.key))continue;
+    selection.set(group.key,group);
+    added+=group.items.length;
+  }
+  if(added)renderSelection();
+  return added;
+}
+
+function addBulkResults(hits){
+  const added=addSearchHits(hits);
+  if(added)notify(`已加入 ${added} 題，可在「查看題單」確認。`);
 }
 
 function searchQuestions(){
@@ -227,15 +259,15 @@ $('#searchForm').onsubmit=event=>{event.preventDefault();searchQuestions();$('#s
 $('#searchResults').onclick=event=>{
   const button=event.target.closest('[data-add-result]');
   if(!button)return;
-  const {group}=searchHits[Number(button.dataset.addResult)];
-  if(selection.has(group.key))return;
-  selection.set(group.key,group);
-  renderSelection();
+  addSearchHits([searchHits[Number(button.dataset.addResult)]]);
 };
+$('#addSearchPage').onclick=()=>addBulkResults(currentSearchPage());
+$('#addSearchAll').onclick=()=>addBulkResults(searchHits);
 for(const [id,step] of [['searchPrevious',-1],['searchNext',1]]){
   $('#'+id).onclick=()=>{searchPage+=step;renderSearchResults();$('#searchSummary').focus();};
 }
-$('#viewSelection').onclick=()=>{renderSelection();$('#selectionDialog').showModal();};
+$('#viewSelection').onclick=()=>{$('#selectionDialog').showModal();renderSelection();};
+$('#selectionDialog').addEventListener('close',()=>{if(!$('#selectionDialog').open)$('#selectionItems').replaceChildren();});
 $('#closeSelection').onclick=()=>$('#selectionDialog').close();
 $('#viewCustomHistory').onclick=()=>$('#customHistory').focus();
 $('#selectionItems').onclick=event=>{

@@ -5,6 +5,74 @@ const path=require('node:path');
 
 const output=process.env.QUIZ_TEST_OUTPUT||path.resolve(__dirname,'../test-results');
 
+async function verifyBulk(page,search){
+  const pageButton=page.locator('#addSearchPage'),allButton=page.locator('#addSearchAll');
+  const selected=()=>page.evaluate(()=>[...selection.values()].flatMap(({exam,items})=>
+    items.map(q=>JSON.stringify([exam.id,q.number]))).sort());
+  const expected=()=>page.evaluate(()=>{
+    const term='混凝土',year=document.querySelector('#searchYear').value,session=document.querySelector('#searchSession').value;
+    const matches=text=>text.replace(/\s/g,'').includes(term);
+    const direct=q=>[q.question,...Object.values(q.options)].some(matches);
+    return DATA.filter(exam=>(!year||exam.year===year)&&(!session||exam.session===session)).flatMap(exam=>
+      exam.questions.filter(q=>{
+        const group=exam.scenarios.find(s=>s.id===q.scenarioId);
+        return group?matches(group.text)||exam.questions.some(sibling=>sibling.scenarioId===group.id&&direct(sibling)):direct(q);
+      }).map(q=>JSON.stringify([exam.id,q.number]))
+    ).sort();
+  });
+  const expectCount=async (button,count)=>assert((await button.textContent()).includes(`新增 ${count} 題`));
+
+  await search('混凝土');
+  const all=await expected();
+  const firstPage=await page.evaluate(()=>searchHits.slice(0,20).reduce((n,hit)=>n+hit.group.items.length,0));
+  assert(all.length>firstPage);
+  await expectCount(pageButton,firstPage);
+  await expectCount(allButton,all.length);
+  await page.locator('[data-add-result]').first().click();
+  const initial=(await selected()).length;
+  await expectCount(pageButton,firstPage-initial);
+  await pageButton.click();
+  assert.equal((await selected()).length,firstPage);
+  assert.equal(await pageButton.getAttribute('aria-disabled'),'true');
+  await pageButton.evaluate(button=>button.click());
+  assert.equal((await selected()).length,firstPage);
+
+  await page.locator('#searchNext').click();
+  assert.match(await page.locator('#searchSummary').textContent(),/第 21–40 筆/);
+  const secondPage=await page.evaluate(()=>searchHits.slice(20,40).reduce((n,hit)=>n+hit.group.items.length,0));
+  await expectCount(pageButton,secondPage);
+  await pageButton.click();
+  assert.equal((await selected()).length,firstPage+secondPage);
+  await expectCount(allButton,all.length-firstPage-secondPage);
+  await allButton.click();
+  assert.deepEqual(await selected(),all);
+  assert.equal(await allButton.getAttribute('aria-disabled'),'true');
+  await allButton.evaluate(button=>button.click());
+  assert.deepEqual(await selected(),all);
+
+  await page.reload();
+  await page.locator('[data-view=builder]').click();
+  await page.selectOption('#searchYear','115');
+  await page.selectOption('#searchSession','115年第1次');
+  await search('混凝土');
+  const filtered=await expected();
+  assert(filtered.length>0&&filtered.length<all.length);
+  await expectCount(allButton,filtered.length);
+  await allButton.click();
+  assert.deepEqual(await selected(),filtered);
+  await page.locator('#viewSelection').click();
+  const groupRow=page.locator('#selectionItems .saved-row').filter({hasText:/情境題・整組 [2-6] 題/}).first();
+  const groupSize=Number((await groupRow.textContent()).match(/整組 (\d+) 題/)[1]);
+  await groupRow.getByRole('button').click();
+  assert.equal((await selected()).length,filtered.length-groupSize);
+  await page.locator('#closeSelection').click();
+  await expectCount(allButton,groupSize);
+  await allButton.click();
+  assert.deepEqual(await selected(),filtered);
+  await page.reload();
+  await page.locator('[data-view=builder]').click();
+}
+
 async function verify(browser,entry,width){
   const context=await browser.newContext({viewport:{width,height:844},colorScheme:width===390?'dark':'light'});
   const page=await context.newPage();
@@ -28,11 +96,14 @@ async function verify(browser,entry,width){
   const cards=page.locator('.search-result');
   await search('   ');
   assert.match(await page.locator('#searchSummary').textContent(),/請輸入/);
+  assert(await page.locator('#searchBulkActions').isHidden());
   await search('<無此題>');
   assert.match(await page.locator('#searchSummary').textContent(),/找不到/);
+  assert(await page.locator('#searchBulkActions').isHidden());
   await page.locator('#viewSelection').click();
   assert(await page.locator('#startCustom').isDisabled());
   await page.keyboard.press('Escape');
+  await verifyBulk(page,search);
   await search('ＣＣＤ');
   assert.equal(await cards.count(),2);
   const first=cards.filter({hasText:'111年第1次・第1類科A卷・原卷第 1 題'});
@@ -129,6 +200,6 @@ async function verify(browser,entry,width){
     for(const entry of ['index.html','dist/index.html']){
       for(const width of [390,1280])await verify(browser,entry,width);
     }
-    console.log('PASS: custom practice across source and Pages builds at 390px and 1280px');
+    console.log('PASS: custom practice and bulk selection across source and Pages builds at 390px and 1280px');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
