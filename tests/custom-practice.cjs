@@ -193,13 +193,136 @@ async function verify(browser,entry,width){
   await context.close();
 }
 
+async function verifyNamedGroups(browser,entry,width){
+  const context=await browser.newContext({viewport:{width,height:844},colorScheme:width===390?'dark':'light'});
+  const page=await context.newPage(),dialogs=[],errors=[];
+  let cancelClear=true;
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('dialog',dialog=>{
+    dialogs.push(dialog.message());
+    return cancelClear&&dialog.message().includes('清空目前題單')?dialog.dismiss():dialog.accept();
+  });
+  await page.goto(new URL(entry,process.env.QUIZ_TEST_BASE_URL).href);
+  await page.evaluate(()=>{
+    const exam=DATA[0],origin={examId:exam.id,number:1},createdAt='2026-01-01T00:00:00Z';
+    localStorage.setItem(DRAFTS_KEY,JSON.stringify({[exam.id]:{id:'previous-draft',ordinal:1,answers:{1:'A'},elapsedMs:42000}}));
+    localStorage.setItem(CUSTOM_PRACTICES_KEY,JSON.stringify({'custom-previous':{items:[origin],createdAt}}));
+    localStorage.setItem(RUNS_KEY,JSON.stringify({'custom-previous':[{id:'previous-run',ordinal:1,points:2,maxPoints:2,elapsedMs:42000}]}));
+  });
+  await page.locator('[data-view=builder]').click();
+  const search=async term=>{
+    await page.locator('#searchTerm').fill(term);
+    await page.locator('#searchTerm').press('Enter');
+  };
+  const field=page.locator('#groupName'),save=page.locator('#saveGroup'),clear=page.locator('#clearSelection');
+  const notice=page.locator('#selectionNotice'),title='潛盾 <複習>';
+  await page.locator('#viewSelection').click();
+  assert(await clear.isDisabled());
+  assert(await save.isDisabled());
+  await page.locator('#closeSelection').click();
+
+  await search('潛盾');
+  const scenario=page.locator('.search-result').filter({hasText:'115年第1次・第1類科A卷・原卷第 32、33 題'});
+  await scenario.getByRole('button',{name:'加入整組 2 題'}).click();
+  await page.locator('#viewSelection').click();
+  await field.fill('   ');
+  await save.click();
+  assert.match(await notice.textContent(),/請輸入題組名稱/);
+  await field.fill('  '+title+'  ');
+  await page.evaluate(()=>{
+    const setItem=Storage.prototype.setItem;
+    window.restoreStorage=()=>{Storage.prototype.setItem=setItem;};
+    Storage.prototype.setItem=function(key,value){
+      if(key===CUSTOM_PRACTICES_KEY)throw new DOMException('Test quota exceeded','QuotaExceededError');
+      return setItem.call(this,key,value);
+    };
+  });
+  await save.click();
+  assert.match(await notice.textContent(),/無法儲存題組/);
+  assert.match(await page.locator('#selectionTotal').textContent(),/共 2 題/);
+  await page.evaluate(()=>window.restoreStorage());
+  await save.click();
+  assert.match(await notice.textContent(),/已儲存/);
+  await field.fill('  '+title+'  ');
+  await save.click();
+  assert.match(await notice.textContent(),/已有同名題組/);
+  const saved=await page.evaluate(()=>Object.entries(customDefinitions()).find(([,group])=>group.name));
+  assert.equal(saved[1].name,title);
+  assert.deepEqual(saved[1].items.map(item=>item.number),[32,33]);
+
+  await page.locator('#closeSelection').click();
+  await search('混凝土');
+  await page.locator('#addSearchAll').click();
+  await page.locator('#viewSelection').click();
+  const count=await page.locator('#selectionTotal').textContent();
+  assert(Number(count.match(/共 (\d+) 題/)[1])>300);
+  for(const button of [clear,save,page.locator('#startCustom')]){
+    const box=await button.boundingBox();
+    assert(box.y>=0&&box.y+box.height<=844);
+  }
+  await page.screenshot({path:path.join(output,`大量題單_${entry.includes('dist')?'發佈版':'來源'}_${width}.png`)});
+  const beforeClear=await page.evaluate(()=>({...localStorage}));
+  await clear.click();
+  assert.match(dialogs.at(-1),/清空目前題單/);
+  assert.equal(await page.locator('#selectionTotal').textContent(),count);
+  cancelClear=false;
+  await clear.click();
+  assert.match(await notice.textContent(),/已清空/);
+  assert.match(await page.locator('#selectionTotal').textContent(),/共 0 題/);
+  assert(await clear.isDisabled());
+  assert(await save.isDisabled());
+  assert.deepEqual(await page.evaluate(()=>({...localStorage})),beforeClear);
+  await page.locator('#closeSelection').click();
+  assert.equal(await page.locator('#selectionCount').textContent(),'已選 0 題');
+  assert.match(await page.locator('#addSearchAll').textContent(),/新增 356 題/);
+
+  await page.reload();
+  await page.locator('[data-view=builder]').click();
+  const named=page.locator('.custom-attempts').filter({has:page.getByRole('heading',{name:title+'・2 題',exact:true})});
+  await named.getByRole('button',{name:'開始練習'}).click();
+  assert.equal(await page.locator('#quiz h2').textContent(),title);
+  assert.equal(await page.locator('#cards .scenario-group .question').count(),2);
+  await page.locator('#backTop').click();
+  await named.getByRole('button',{name:'繼續作答'}).click();
+  await page.locator('#submit').click();
+  await page.locator('#backTop').click();
+  await named.getByRole('button',{name:'查看成績與檢討'}).click();
+  assert.equal(await page.locator('.review-jump').count(),2);
+  await page.locator('#backTop').click();
+  await named.getByRole('button',{name:'再做一次'}).click();
+  assert.match(dialogs.at(-1),/確定要再做一次/);
+  assert.match(await page.locator('#runLabel').textContent(),/第 2 次/);
+  await page.locator('#backTop').click();
+
+  await search('ＣＣＤ');
+  await page.locator('[data-add-result]').first().click();
+  await page.locator('#viewSelection').click();
+  await field.fill('立即練習的題組');
+  await save.click();
+  const stored=await page.evaluate(()=>Object.keys(customDefinitions()));
+  await page.locator('#startCustom').click();
+  assert.equal(await page.locator('#quiz h2').textContent(),'立即練習的題組');
+  assert.deepEqual(await page.evaluate(()=>Object.keys(customDefinitions())),stored);
+  await page.locator('#backTop').click();
+  await page.locator('[data-view=wrong]').click();
+  await page.locator('#clearWrong').click();
+  await page.locator('[data-view=builder]').click();
+  assert(await named.getByRole('button',{name:'開始練習'}).isVisible());
+  assert.deepEqual(await page.evaluate(()=>Object.keys(customDefinitions()).sort()),stored.filter(id=>id!=='custom-previous').sort());
+  assert.deepEqual(errors,[]);
+  await context.close();
+}
+
 (async()=>{
   fs.mkdirSync(output,{recursive:true});
   const browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE});
   try{
     for(const entry of ['index.html','dist/index.html']){
-      for(const width of [390,1280])await verify(browser,entry,width);
+      for(const width of [390,1280]){
+        await verify(browser,entry,width);
+        await verifyNamedGroups(browser,entry,width);
+      }
     }
-    console.log('PASS: custom practice and bulk selection across source and Pages builds at 390px and 1280px');
+    console.log('PASS: custom practice, bulk selection, clearing and saved groups across source and Pages builds at 390px and 1280px');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

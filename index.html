@@ -47,7 +47,7 @@
           <button class="primary" type="submit">搜尋</button>
         </form>
         <p class="hint" id="searchHelp">比對題幹、選項與共用情境的文字。圖表及掃描圖中的文字可能無法搜尋。</p>
-        <button id="viewCustomHistory" class="secondary">查看我的組卷紀錄</button>
+        <button id="viewCustomHistory" class="secondary">查看已儲存題組與作答紀錄</button>
       </section>
       <p id="searchSummary" class="hint" role="status" tabindex="-1"></p>
       <div id="searchBulkActions" class="search-actions" role="group" aria-label="批次加入題目" hidden>
@@ -66,9 +66,22 @@
         <button id="viewSelection" class="secondary">查看題單</button>
       </div>
       <dialog id="selectionDialog" class="card selection-dialog" aria-labelledby="selectionTitle">
-        <div class="selection-heading"><h2 id="selectionTitle">本次題單</h2><button id="closeSelection" class="secondary" autofocus>關閉</button></div>
+        <div class="selection-heading">
+          <h2 id="selectionTitle">本次題單</h2>
+          <div class="selection-tools">
+            <button id="clearSelection" class="danger" type="button" disabled>清空題單</button>
+            <button id="closeSelection" class="secondary" type="button" autofocus>關閉</button>
+          </div>
+        </div>
         <div id="selectionItems"></div>
-        <div class="selection-actions"><p id="selectionTotal" class="hint" role="status"></p><button id="startCustom" class="primary" disabled>開始練習</button></div>
+        <div class="selection-footer">
+          <form id="saveGroupForm" class="save-group-form">
+            <div class="field"><label for="groupName">自訂題組名稱</label><input id="groupName" name="groupName" maxlength="60" required disabled></div>
+            <button id="saveGroup" class="secondary" type="submit" disabled>儲存題組</button>
+          </form>
+          <p id="selectionNotice" class="hint" role="status"></p>
+          <div class="selection-actions"><p id="selectionTotal" class="hint" role="status"></p><button id="startCustom" class="primary" type="button" disabled>開始練習</button></div>
+        </div>
       </dialog>
     </main>
 

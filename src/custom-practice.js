@@ -16,7 +16,14 @@ function findPractice(id){
     const question=examById.get(origin.examId)?.questions.find(q=>q.number===origin.number);
     return question&&{...question,origin,number:index+1};
   });
-  return questions.every(Boolean)?{id,custom:true,session:'自組練習',questions}:null;
+  return questions.every(Boolean)?{id,custom:true,session:definition.name||'自組練習',questions}:null;
+}
+
+function clearTemporaryPractices(){
+  const definitions=Object.entries(customDefinitions());
+  const named=definitions.filter(([,definition])=>definition.name);
+  if(!named.length)localStorage.removeItem(CUSTOM_PRACTICES_KEY);
+  else if(named.length!==definitions.length)writeStore(CUSTOM_PRACTICES_KEY,Object.fromEntries(named));
 }
 
 function examSourceLabel(exam){
@@ -37,20 +44,25 @@ function questionSource(question){
 function renderCustomHistory(){
   const drafts=readStore(DRAFTS_KEY,{});
   const definitions=Object.entries(customDefinitions()).reverse();
-  const rows=definitions.map(([id,definition])=>{
+  const saved=[],temporary=[];
+  for(const [id,definition] of definitions){
     const records=getRuns(id).slice().reverse();
     const draft=drafts[id];
     const resumable=draft&&!records.some(record=>record.id===draft.id);
-    if(!resumable&&!records.length)return '';
+    if(!definition.name&&!resumable&&!records.length)continue;
     const date=new Date(definition.createdAt).toLocaleString('zh-TW');
-    return `<section class="custom-attempts"><h4>自組練習・${definition.items.length} 題</h4>
+    const start=definition.name&&!resumable?`<button class="primary" data-custom-start="${escapeHtml(id)}">${records.length?'再做一次':'開始練習'}</button>`:'';
+    const row=`<section class="custom-attempts"><div class="custom-attempt-heading"><h4>${escapeHtml(definition.name||'自組練習')}・${definition.items.length} 題</h4>${start}</div>
       <p class="hint">建立於 ${escapeHtml(date)}</p>
       ${resumable?`<div class="saved-row"><div><b>${runName(draft)}</b><div>已答 ${Object.values(draft.answers).filter(Boolean).length} 題・累計 ${formatTime(draft.elapsedMs)}</div></div>
         <button class="primary" data-custom-resume="${escapeHtml(id)}">繼續作答</button></div>`:''}
       ${records.map(record=>`<div class="saved-row"><div><b>${runName(record)}</b><div>得分 ${record.points}/${record.maxPoints} 分・用時 ${formatTime(record.elapsedMs)}</div></div>
         <button class="secondary" data-custom-id="${escapeHtml(id)}" data-custom-record="${escapeHtml(record.id)}">查看成績與檢討</button></div>`).join('')}</section>`;
-  }).filter(Boolean);
-  $('#customHistory').innerHTML='<h3>我的組卷紀錄</h3>'+(rows.join('')||'<p class="hint">開始自組練習後，可在這裡續答或檢討。</p>');
+    (definition.name?saved:temporary).push(row);
+  }
+  $('#customHistory').innerHTML=
+    '<h3>已儲存題組</h3>'+(saved.join('')||'<p class="hint">從「查看題單」儲存有名稱的題組，可在這裡反覆練習。</p>')+
+    '<h3>臨時組卷紀錄</h3>'+(temporary.join('')||'<p class="hint">開始臨時組卷練習後，可在這裡續答或檢討。</p>');
 }
 
 function addWrongReviewFilter(review,attempts){
@@ -128,7 +140,7 @@ function buildSearchIndex(){
 }
 
 const selection=new Map(),searchPageSize=20;
-let searchIndex,searchHits=[],searchPage=0,activeTerm='';
+let searchIndex,searchHits=[],searchPage=0,activeTerm='',savedSelectionId=null;
 
 function resultTitle(group){
   return `${examSourceLabel(group.exam)}・原卷第 ${group.items.map(q=>q.number).join('、')} 題`;
@@ -173,7 +185,7 @@ function renderSelection(){
   const count=groups.reduce((sum,group)=>sum+group.items.length,0);
   $('#selectionCount').textContent=`已選 ${count} 題`;
   $('#selectionTotal').textContent=`共 ${count} 題，滿分 ${count*2} 分`;
-  $('#startCustom').disabled=!count;
+  for(const id of ['startCustom','clearSelection','groupName','saveGroup'])$('#'+id).disabled=!count;
   if($('#selectionDialog').open){
     $('#selectionItems').innerHTML=groups.map((group,index)=>`<div class="saved-row"><div><b>${escapeHtml(resultTitle(group))}</b>
       <div>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</div></div>
@@ -204,7 +216,7 @@ function addSearchHits(hits){
     selection.set(group.key,group);
     added+=group.items.length;
   }
-  if(added)renderSelection();
+  if(added)selectionChanged();
   return added;
 }
 
@@ -229,20 +241,55 @@ function searchQuestions(){
   renderSearchResults();
 }
 
-function startCustomPractice(){
-  if(!selection.size)return;
+function selectionChanged(message=''){
+  savedSelectionId=null;
+  $('#selectionNotice').textContent=message;
+  renderSelection();
+}
+
+function saveSelection(definitions,name=''){
   const items=[...selection.values()].flatMap(({exam,items})=>items.map(q=>({examId:exam.id,number:q.number})));
   const id='custom-'+(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`);
-  if(!writeStore(CUSTOM_PRACTICES_KEY,{...customDefinitions(),[id]:{items,createdAt:new Date().toISOString()}}))return;
-  if(!startExam(id)){
-    const definitions=customDefinitions();
-    delete definitions[id];
-    writeStore(CUSTOM_PRACTICES_KEY,definitions);
+  const definition={items,createdAt:new Date().toISOString(),...(name?{name}:{})};
+  return writeStore(CUSTOM_PRACTICES_KEY,{...definitions,[id]:definition})?id:null;
+}
+
+function saveNamedGroup(event){
+  event.preventDefault();
+  if(!selection.size)return;
+  const field=$('#groupName'),status=$('#selectionNotice'),name=field.value.trim();
+  const normalized=value=>value.normalize('NFKC').toLowerCase();
+  const definitions=customDefinitions();
+  if(!name||Object.values(definitions).some(group=>group.name&&normalized(group.name)===normalized(name))){
+    status.textContent=name?'已有同名題組，請使用其他名稱。':'請輸入題組名稱。';
+    field.focus();
+    return;
+  }
+  const id=saveSelection(definitions,name);
+  if(!id){status.textContent='目前無法儲存題組，題單仍保留。';return;}
+  savedSelectionId=id;
+  field.value='';
+  status.textContent=`已儲存「${name}」。之後可從「已儲存題組」開啟。`;
+  renderCustomHistory();
+}
+
+function startCustomPractice(){
+  if(!selection.size)return;
+  const id=savedSelectionId||saveSelection(customDefinitions());
+  if(!id){$('#selectionNotice').textContent='目前無法儲存作答進度，題單仍保留。';return;}
+  const retry=!!(savedSelectionId&&getRuns(id).length&&!readStore(DRAFTS_KEY,{})[id]);
+  if(!startExam(id,retry)){
+    if(!savedSelectionId){
+      const definitions=customDefinitions();
+      delete definitions[id];
+      writeStore(CUSTOM_PRACTICES_KEY,definitions);
+      $('#selectionNotice').textContent='目前無法開始練習，題單仍保留。';
+    }
     return;
   }
   selection.clear();
   $('#selectionDialog').close();
-  renderSelection();
+  selectionChanged();
   $('#quiz h2').focus({preventScroll:true});
 }
 
@@ -269,20 +316,29 @@ for(const [id,step] of [['searchPrevious',-1],['searchNext',1]]){
 $('#viewSelection').onclick=()=>{$('#selectionDialog').showModal();renderSelection();};
 $('#selectionDialog').addEventListener('close',()=>{if(!$('#selectionDialog').open)$('#selectionItems').replaceChildren();});
 $('#closeSelection').onclick=()=>$('#selectionDialog').close();
+$('#clearSelection').onclick=()=>{
+  if(!selection.size||!confirm('確定要清空目前題單嗎？已儲存的題組與作答紀錄會保留。'))return;
+  selection.clear();
+  selectionChanged('已清空目前題單。');
+  $('#closeSelection').focus();
+};
+$('#saveGroupForm').onsubmit=saveNamedGroup;
 $('#viewCustomHistory').onclick=()=>$('#customHistory').focus();
 $('#selectionItems').onclick=event=>{
   const button=event.target.closest('[data-remove-result]');
   if(!button)return;
   const index=Number(button.dataset.removeResult);
   selection.delete([...selection.keys()][index]);
-  renderSelection();
+  selectionChanged();
   const remaining=$$('[data-remove-result]');
   (remaining[Math.min(index,remaining.length-1)]||$('#closeSelection')).focus();
 };
 $('#startCustom').onclick=startCustomPractice;
 $('#customHistory').onclick=event=>{
+  const start=event.target.closest('[data-custom-start]');
   const resume=event.target.closest('[data-custom-resume]');
   const review=event.target.closest('[data-custom-record]');
+  if(start){const id=start.dataset.customStart;startExam(id,!!getRuns(id).length);}
   if(resume)resumeExam(resume.dataset.customResume);
   if(review)openAttemptReview(review.dataset.customId,review.dataset.customRecord);
 };

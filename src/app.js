@@ -43,7 +43,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
     function renderQuiz(){
       showView('home');document.body.classList.add('quiz-mode');
       if(!current.custom){$('#year').value=current.year;$('#year').onchange();$('#sheet').value=current.id;renderExamHistory();}
-      const headingText=current.custom?'自組練習':`${current.session}・${label(current.sheet)}`;
+      const headingText=current.custom?current.session:`${current.session}・${label(current.sheet)}`;
       const source=current.custom?'':`｜<a class="source" href="${PDF_PREFIX}${encodeURI(current.pdf)}" target="_blank">開啟原始 PDF</a>`;
       const qs=current.questions; $('#quiz').hidden=false; $('#quiz').innerHTML=`<div class="quiz-top"><div><h2>${escapeHtml(headingText)}</h2><p>共 ${qs.length} 題${source}</p></div></div><div class="quiz-actions" role="region" aria-label="作答操作列"><div class="timer-block"><b id="timer">00:00</b><span id="runLabel"></span><small id="timerNote">／90:00</small></div><span id="answerProgress"></span><button class="secondary" id="backTop">${current.custom?'回到搜尋組卷':'回到選卷'}</button><button class="secondary" id="savePause">儲存並暫停</button><button class="primary" id="submit">交卷並檢討</button></div><div id="cards"></div>`;
       const renderQuestion=({q,i,text})=>{const opts=['A','B','C','D'].map(k=>{const val=q.options[k]||'（本題排版未完整擷取，請參考原始 PDF）';return `<label class="option ${q.options[k]?'':'missing'}"><input type="radio" name="q${i}" value="${k}"><span><b>${k}.</b> ${escapeHtml(val)}</span></label>`}).join('');return `<article class="card question" data-number="${q.number}"><div class="q-head"><span class="q-no">第 ${q.number} 題</span><div class="q-text">${escapeHtml(text||'請參考原始 PDF 題目')}</div></div>${questionSource(q)}${renderMarkers(q)}${sourceImage(q.source,`第 ${q.number} 題原卷圖表與選項`)}${q.sourceNote?`<p class="source-note">${escapeHtml(q.sourceNote)}</p>`:''}<div class="options">${opts}</div></article>`;};
@@ -157,7 +157,7 @@ const DATA=window.QUIZ_DATA||[], $=s=>document.querySelector(s), $$=s=>[...docum
       localStorage.removeItem(WRONG_KEY);
       localStorage.removeItem(COMPLETED_KEY);
       localStorage.removeItem(ATTEMPTS_KEY);
-      localStorage.removeItem(DRAFTS_KEY);localStorage.removeItem(RUNS_KEY);localStorage.removeItem(MARKS_KEY);localStorage.removeItem(CUSTOM_PRACTICES_KEY);run=null;current=null;$('#quiz').hidden=true;
+      localStorage.removeItem(DRAFTS_KEY);localStorage.removeItem(RUNS_KEY);localStorage.removeItem(MARKS_KEY);clearTemporaryPractices();run=null;current=null;$('#quiz').hidden=true;
       for(const option of $('#sheet').options){if(option.value)option.textContent=option.value;}
       refreshStats();refreshWrongFilters();renderWrong();renderSavedProgress();renderExamHistory();renderMarked();syncMarkButtons();
     };

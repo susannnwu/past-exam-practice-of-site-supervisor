@@ -158,8 +158,8 @@ body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .quiz-actio
 
 #builder h2,.search-result h3{margin:0 0 10px}
 .search-form{display:grid;grid-template-columns:2fr 1fr 1fr auto;align-items:end;gap:12px}
-#searchTerm{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--ink);font:inherit}
-#searchTerm:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+#searchTerm,#groupName{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--ink);font:inherit}
+#searchTerm:focus-visible,#groupName:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
 .search-result{margin:12px 0;padding:16px 20px;overflow-wrap:anywhere}
 .search-matches,.search-question ul{padding-inline-start:22px}
 .search-matches li+li{margin-top:6px}
@@ -175,11 +175,20 @@ body:has(#home.active #quiz:not([hidden]) #paperPanel:not([hidden])) .quiz-actio
   padding:8px 16px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);box-shadow:var(--shadow)}
 .selection-bar button,.selection-dialog button,.search-actions button,.search-form button{min-height:44px}
 .selection-dialog{width:min(560px,calc(100% - 24px));max-height:calc(100% - 32px);padding:16px 20px;color:var(--ink)}
+.selection-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;overflow:hidden}
 .selection-dialog::backdrop{background:#0009}
 .selection-heading,.selection-actions{justify-content:space-between}
 .selection-dialog .selection-heading h2{margin:0}
+#selectionItems{overflow:auto;overscroll-behavior:contain}
+.selection-tools,.custom-attempt-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.selection-footer{border-top:1px solid var(--line);padding-top:10px}
+.save-group-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px}
+#selectionNotice{margin:6px 0;overflow-wrap:anywhere}
+#selectionNotice:empty{display:none}
+.selection-actions .hint{margin:8px 0}
 .custom-attempts{border-top:1px solid var(--line);padding-top:12px}
-.custom-attempts h4{margin:0}
+.custom-attempt-heading{justify-content:space-between}
+.custom-attempts h4{margin:0;min-width:0;overflow-wrap:anywhere}
 .custom-attempts .hint{margin:0 0 8px}
 .question-source{margin:10px 0 0;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .wrong-review-filter{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer}
