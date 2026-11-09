@@ -1,6 +1,8 @@
 const CUSTOM_PRACTICES_KEY='site-supervisor-custom-practices-v1';
 const examById=new Map(DATA.map(exam=>[exam.id,exam]));
 const customDefinitions=()=>readStore(CUSTOM_PRACTICES_KEY,{});
+const collectionId=(id,definition)=>definition.collectionId||id;
+const newPracticeId=()=>'custom-'+(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`);
 
 function sourceExam(question,exam){
   return question.origin?examById.get(question.origin.examId):exam;
@@ -44,20 +46,36 @@ function questionSource(question){
 function renderCustomHistory(){
   const drafts=readStore(DRAFTS_KEY,{});
   const definitions=Object.entries(customDefinitions()).reverse();
+  const previous=new Map();
   const saved=[],temporary=[];
-  for(const [id,definition] of definitions){
+  function attempts(id){
     const records=getRuns(id).slice().reverse();
     const draft=drafts[id];
     const resumable=draft&&!records.some(record=>record.id===draft.id);
-    if(!definition.name&&!resumable&&!records.length)continue;
-    const date=new Date(definition.createdAt).toLocaleString('zh-TW');
-    const start=definition.name&&!resumable?`<button class="primary" data-custom-start="${escapeHtml(id)}">${records.length?'再做一次':'開始練習'}</button>`:'';
-    const row=`<section class="custom-attempts"><div class="custom-attempt-heading"><h4>${escapeHtml(definition.name||'自組練習')}・${definition.items.length} 題</h4>${start}</div>
-      <p class="hint">建立於 ${escapeHtml(date)}</p>
+    const html=`
       ${resumable?`<div class="saved-row"><div><b>${runName(draft)}</b><div>已答 ${Object.values(draft.answers).filter(Boolean).length} 題・累計 ${formatTime(draft.elapsedMs)}</div></div>
         <button class="primary" data-custom-resume="${escapeHtml(id)}">繼續作答</button></div>`:''}
       ${records.map(record=>`<div class="saved-row"><div><b>${runName(record)}</b><div>得分 ${record.points}/${record.maxPoints} 分・用時 ${formatTime(record.elapsedMs)}</div></div>
-        <button class="secondary" data-custom-id="${escapeHtml(id)}" data-custom-record="${escapeHtml(record.id)}">查看成績與檢討</button></div>`).join('')}</section>`;
+        <button class="secondary" data-custom-id="${escapeHtml(id)}" data-custom-record="${escapeHtml(record.id)}">查看成績與檢討</button></div>`).join('')}`;
+    return {records,resumable,html};
+  }
+  for(const [id,definition] of definitions.filter(([,definition])=>definition.archived)){
+    const {records,resumable,html}=attempts(id);
+    if(!records.length&&!resumable)continue;
+    const key=collectionId(id,definition);
+    if(!previous.has(key))previous.set(key,[]);
+    previous.get(key).push(`<div class="previous-practice"><h5>分類前的題組・${definition.items.length} 題</h5>${html}</div>`);
+  }
+  for(const [id,definition] of definitions.filter(([,definition])=>!definition.archived)){
+    const {records,resumable,html}=attempts(id);
+    if(!definition.name&&!resumable&&!records.length)continue;
+    const date=new Date(definition.createdAt).toLocaleString('zh-TW');
+    const canPractice=definition.name&&definition.items.length;
+    const start=canPractice&&!resumable?`<button class="primary" data-custom-start="${escapeHtml(id)}">${records.length?'再做一次':'開始練習'}</button>`:'';
+    const classify=canPractice?`<button class="secondary" data-classify-group="${escapeHtml(id)}">挑題分類</button>`:'';
+    const history=previous.get(collectionId(id,definition))?.join('')||'';
+    const row=`<section class="custom-attempts"><div class="custom-attempt-heading"><h4>${escapeHtml(definition.name||'自組練習')}・${definition.items.length} 題</h4><div class="selection-tools">${classify}${start}</div></div>
+      <p class="hint">建立於 ${escapeHtml(date)}</p>${html}${history}</section>`;
     (definition.name?saved:temporary).push(row);
   }
   $('#customHistory').innerHTML=
@@ -140,7 +158,8 @@ function buildSearchIndex(){
 }
 
 const selection=new Map(),searchPageSize=20;
-let searchIndex,searchHits=[],searchPage=0,activeTerm='',savedSelectionId=null;
+const checkedGroups=new Set();
+let searchIndex,searchHits=[],searchPage=0,activeTerm='',classificationSource=null;
 
 function resultTitle(group){
   return `${examSourceLabel(group.exam)}・原卷第 ${group.items.map(q=>q.number).join('、')} 題`;
@@ -185,13 +204,7 @@ function renderSelection(){
   const count=groups.reduce((sum,group)=>sum+group.items.length,0);
   $('#selectionCount').textContent=`已選 ${count} 題`;
   $('#selectionTotal').textContent=`共 ${count} 題，滿分 ${count*2} 分`;
-  for(const id of ['startCustom','clearSelection','groupName','saveGroup'])$('#'+id).disabled=!count;
-  if($('#selectionDialog').open){
-    $('#selectionItems').innerHTML=groups.map((group,index)=>`<div class="saved-row"><div><b>${escapeHtml(resultTitle(group))}</b>
-      <div>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</div></div>
-      <button class="secondary" data-remove-result="${index}" aria-label="移除 ${escapeHtml(resultTitle(group))}">移除</button></div>`).join('')||
-      '<p class="hint">請先從搜尋結果加入題目。</p>';
-  }
+  if($('#selectionDialog').open)renderClassification();
   $$('[data-add-result]').forEach(button=>{
     const {group}=searchHits[Number(button.dataset.addResult)];
     const added=selection.has(group.key);
@@ -242,49 +255,140 @@ function searchQuestions(){
 }
 
 function selectionChanged(message=''){
-  savedSelectionId=null;
   $('#selectionNotice').textContent=message;
   renderSelection();
 }
 
-function saveSelection(definitions,name=''){
-  const items=[...selection.values()].flatMap(({exam,items})=>items.map(q=>({examId:exam.id,number:q.number})));
-  const id='custom-'+(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`);
-  const definition={items,createdAt:new Date().toISOString(),...(name?{name}:{})};
-  return writeStore(CUSTOM_PRACTICES_KEY,{...definitions,[id]:definition})?id:null;
+const classificationGroups=()=>classificationSource?.groups||selection;
+const questionRefs=groups=>[...groups].flatMap(({exam,items})=>items.map(q=>({examId:exam.id,number:q.number})));
+const originKey=origin=>JSON.stringify([origin.examId,origin.number]);
+
+function updateClassificationControls(){
+  const groups=classificationGroups();
+  const count=[...groups].reduce((sum,[key,group])=>sum+(checkedGroups.has(key)?group.items.length:0),0);
+  const newGroup=!$('#groupDestination').value;
+  $('#classificationCount').textContent=`勾選 ${count} 題供分類`;
+  $('#checkAllGroups').disabled=checkedGroups.size===groups.size;
+  $('#uncheckAllGroups').disabled=!count;
+  $('#groupDestination').disabled=!count;
+  $('#groupNameField').hidden=!newGroup;
+  $('#groupName').disabled=!count||!newGroup;
+  $('#saveGroup').disabled=!count;
+}
+
+function renderClassification(){
+  const groups=classificationGroups();
+  const source=classificationSource;
+  $('#selectionTitle').textContent=source?`分類「${source.name}」`:'本次題單';
+  $('#clearSelection').hidden=!!source;
+  $('#clearSelection').disabled=!groups.size;
+  $('#startCustom').hidden=!!source;
+  $('#startCustom').disabled=!selection.size;
+  if(source)$('#selectionTotal').textContent=`來源題組剩餘 ${questionRefs(groups.values()).length} 題`;
+  $('#saveGroup').textContent=source?'移動勾選題目':'儲存勾選題目';
+  $('#selectionItems').innerHTML=[...groups].map(([key,group],index)=>`<div class="saved-row">
+    <label class="classification-item"><input type="checkbox" data-classify-item="${index}" ${checkedGroups.has(key)?'checked':''}>
+      <span><b>${escapeHtml(resultTitle(group))}</b><small>${group.scenario?'情境題・整組':'單題・'} ${group.items.length} 題</small></span></label>
+    ${source?'':`<button class="secondary" data-remove-result="${index}" aria-label="移除 ${escapeHtml(resultTitle(group))}">移除</button>`}</div>`).join('')||
+    (source?'<p class="hint">來源題組已無待分類的題目。</p>':'<p class="hint">請先從搜尋結果加入題目。</p>');
+  updateClassificationControls();
+}
+
+function refreshGroupDestinations(){
+  const destinations=Object.entries(customDefinitions()).filter(([id,group])=>group.name&&!group.archived&&id!==classificationSource?.id);
+  const names=new Map(destinations.map(([id,group])=>[id,group.name]));
+  fill($('#groupDestination'),[...names.keys()],'新增命名題組',id=>names.get(id));
+}
+
+function openClassification(source=null){
+  classificationSource=source;
+  checkedGroups.clear();
+  if(!source)for(const key of selection.keys())checkedGroups.add(key);
+  $('#groupName').value='';
+  $('#selectionNotice').textContent='';
+  refreshGroupDestinations();
+  $('#selectionDialog').showModal();
+  renderSelection();
+}
+
+function openSavedClassification(id){
+  const definition=customDefinitions()[id],exam=findPractice(id);
+  if(!exam||!definition?.name||definition.archived){notify('題組已更新，請重新開啟再分類。');return;}
+  const groups=new Map();
+  for(const question of exam.questions){
+    const original=sourceExam(question);
+    const scenario=original.scenarios?.find(group=>group.id===question.scenarioId);
+    const key=JSON.stringify([original.id,scenario?'s':'q',scenario?.id??question.origin.number]);
+    if(!groups.has(key))groups.set(key,{exam:original,scenario,items:[]});
+    groups.get(key).items.push({...question,number:question.origin.number});
+  }
+  openClassification({id,name:definition.name,groups});
+}
+
+function reviseGroup(definitions,id,items){
+  const previous=definitions[id],key=collectionId(id,previous);
+  definitions[id]={...previous,collectionId:key,archived:true};
+  const nextId=newPracticeId();
+  definitions[nextId]={...previous,collectionId:key,items};
+  return nextId;
 }
 
 function saveNamedGroup(event){
   event.preventDefault();
-  if(!selection.size)return;
-  const field=$('#groupName'),status=$('#selectionNotice'),name=field.value.trim();
+  if(!checkedGroups.size)return;
+  const field=$('#groupName'),status=$('#selectionNotice'),destination=$('#groupDestination').value;
   const normalized=value=>value.normalize('NFKC').toLowerCase();
   const definitions=customDefinitions();
-  if(!name||Object.values(definitions).some(group=>group.name&&normalized(group.name)===normalized(name))){
+  const target=definitions[destination],sourceId=classificationSource?.id;
+  const source=definitions[sourceId];
+  if((destination&&(!target?.name||target.archived))||(sourceId&&(!source||source.archived))){
+    status.textContent='題組已更新，請重新開啟再分類。';
+    return;
+  }
+  const name=target?.name||field.value.trim();
+  if(!destination&&(!name||Object.values(definitions).some(group=>group.name&&!group.archived&&normalized(group.name)===normalized(name)))){
     status.textContent=name?'已有同名題組，請使用其他名稱。':'請輸入題組名稱。';
     field.focus();
     return;
   }
-  const id=saveSelection(definitions,name);
-  if(!id){status.textContent='目前無法儲存題組，題單仍保留。';return;}
-  savedSelectionId=id;
+  const groups=classificationGroups();
+  const chosen=[...groups].filter(([key])=>checkedGroups.has(key));
+  const items=questionRefs(chosen.map(([,group])=>group));
+  if(!items.length)return;
+  if(target){
+    const existing=new Set(target.items.map(originKey));
+    const additions=items.filter(item=>!existing.has(originKey(item)));
+    if(additions.length)reviseGroup(definitions,destination,[...target.items,...additions]);
+  }else{
+    definitions[newPracticeId()]={name,items,createdAt:new Date().toISOString()};
+  }
+  let nextSourceId;
+  if(source){
+    const moved=new Set(items.map(originKey));
+    nextSourceId=reviseGroup(definitions,sourceId,source.items.filter(item=>!moved.has(originKey(item))));
+  }
+  if(!writeStore(CUSTOM_PRACTICES_KEY,definitions)){status.textContent='目前無法儲存題組，原本的題目仍保留。';return;}
+  for(const [key] of chosen)groups.delete(key);
+  if(source)classificationSource.id=nextSourceId;
+  checkedGroups.clear();
   field.value='';
-  status.textContent=`已儲存「${name}」。之後可從「已儲存題組」開啟。`;
+  refreshGroupDestinations();
+  selectionChanged(`${source?'已移動':'已儲存'} ${items.length} 題至「${name}」。`);
   renderCustomHistory();
 }
 
 function startCustomPractice(){
   if(!selection.size)return;
-  const id=savedSelectionId||saveSelection(customDefinitions());
-  if(!id){$('#selectionNotice').textContent='目前無法儲存作答進度，題單仍保留。';return;}
-  const retry=!!(savedSelectionId&&getRuns(id).length&&!readStore(DRAFTS_KEY,{})[id]);
-  if(!startExam(id,retry)){
-    if(!savedSelectionId){
-      const definitions=customDefinitions();
-      delete definitions[id];
-      writeStore(CUSTOM_PRACTICES_KEY,definitions);
-      $('#selectionNotice').textContent='目前無法開始練習，題單仍保留。';
-    }
+  const id=newPracticeId();
+  const definition={items:questionRefs(selection.values()),createdAt:new Date().toISOString()};
+  if(!writeStore(CUSTOM_PRACTICES_KEY,{...customDefinitions(),[id]:definition})){
+    $('#selectionNotice').textContent='目前無法儲存作答進度，題單仍保留。';return;
+  }
+  if(!startExam(id)){
+    const definitions=customDefinitions();
+    delete definitions[id];
+    writeStore(CUSTOM_PRACTICES_KEY,definitions);
+    $('#selectionNotice').textContent='目前無法開始練習，題單仍保留。';
     return;
   }
   selection.clear();
@@ -313,32 +417,58 @@ $('#addSearchAll').onclick=()=>addBulkResults(searchHits);
 for(const [id,step] of [['searchPrevious',-1],['searchNext',1]]){
   $('#'+id).onclick=()=>{searchPage+=step;renderSearchResults();$('#searchSummary').focus();};
 }
-$('#viewSelection').onclick=()=>{$('#selectionDialog').showModal();renderSelection();};
-$('#selectionDialog').addEventListener('close',()=>{if(!$('#selectionDialog').open)$('#selectionItems').replaceChildren();});
+$('#viewSelection').onclick=()=>openClassification();
+$('#selectionDialog').addEventListener('close',()=>{
+  if($('#selectionDialog').open)return;
+  classificationSource=null;
+  checkedGroups.clear();
+  $('#selectionItems').replaceChildren();
+});
 $('#closeSelection').onclick=()=>$('#selectionDialog').close();
 $('#clearSelection').onclick=()=>{
   if(!selection.size||!confirm('確定要清空目前題單嗎？已儲存的題組與作答紀錄會保留。'))return;
   selection.clear();
+  checkedGroups.clear();
   selectionChanged('已清空目前題單。');
   $('#closeSelection').focus();
 };
 $('#saveGroupForm').onsubmit=saveNamedGroup;
+$('#groupDestination').onchange=updateClassificationControls;
+for(const [id,checked] of [['checkAllGroups',true],['uncheckAllGroups',false]]){
+  $('#'+id).onclick=()=>{
+    checkedGroups.clear();
+    if(checked)for(const key of classificationGroups().keys())checkedGroups.add(key);
+    $$('[data-classify-item]').forEach(input=>{input.checked=checked;});
+    updateClassificationControls();
+  };
+}
 $('#viewCustomHistory').onclick=()=>$('#customHistory').focus();
+$('#selectionItems').onchange=event=>{
+  const input=event.target.closest('[data-classify-item]');
+  if(!input)return;
+  const key=[...classificationGroups().keys()][Number(input.dataset.classifyItem)];
+  if(input.checked)checkedGroups.add(key);else checkedGroups.delete(key);
+  updateClassificationControls();
+};
 $('#selectionItems').onclick=event=>{
   const button=event.target.closest('[data-remove-result]');
   if(!button)return;
   const index=Number(button.dataset.removeResult);
-  selection.delete([...selection.keys()][index]);
+  const key=[...selection.keys()][index];
+  selection.delete(key);
+  checkedGroups.delete(key);
   selectionChanged();
   const remaining=$$('[data-remove-result]');
   (remaining[Math.min(index,remaining.length-1)]||$('#closeSelection')).focus();
 };
 $('#startCustom').onclick=startCustomPractice;
 $('#customHistory').onclick=event=>{
+  const classify=event.target.closest('[data-classify-group]');
   const start=event.target.closest('[data-custom-start]');
   const resume=event.target.closest('[data-custom-resume]');
   const review=event.target.closest('[data-custom-record]');
   if(start){const id=start.dataset.customStart;startExam(id,!!getRuns(id).length);}
+  if(classify)openSavedClassification(classify.dataset.classifyGroup);
   if(resume)resumeExam(resume.dataset.customResume);
   if(review)openAttemptReview(review.dataset.customId,review.dataset.customRecord);
 };
